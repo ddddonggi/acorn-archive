@@ -315,17 +315,7 @@ export default function SummaryEditor() {
 
         <aside className="space-y-5">
           <section className="warm-panel rounded-[24px] p-6">
-            <h2 className="text-xl font-black text-[#3f2a1d]">핵심 키워드</h2>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {keywords.map((keyword) => (
-                <span key={keyword} className="rounded-full bg-[#fff8eb] px-3 py-2 text-sm font-bold text-[#5b351f]">
-                  {keyword}
-                </span>
-              ))}
-            </div>
-          </section>
-          <section className="warm-panel rounded-[24px] p-6">
-            <h2 className="text-xl font-black text-[#3f2a1d]">감정 태그</h2>
+            <h2 className="text-xl font-black text-[#3f2a1d]">감상 태그</h2>
             <div className="mt-4 flex flex-wrap gap-2">
               {emotionTags.map((emotion) => (
                 <span key={emotion} className="rounded-full bg-[#697a4c] px-3 py-2 text-sm font-bold text-[#fff8eb]">

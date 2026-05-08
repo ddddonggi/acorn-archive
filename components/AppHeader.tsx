@@ -49,7 +49,7 @@ export default function AppHeader() {
     <header className="sticky top-0 z-20 border-b border-[#8a5a2f]/15 bg-[#fff8eb]/85 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
         <Link href="/" className="text-lg font-bold tracking-tight text-[#5b351f]">
-          도토리 감상 창고
+          취향 책장
         </Link>
         <div className="hidden items-center gap-2 md:flex">
           {navItems.map((item) => (

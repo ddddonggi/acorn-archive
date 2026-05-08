@@ -3,7 +3,7 @@ import AppHeader from "@/components/AppHeader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "도토리 감상 창고",
+  title: "취향 책장",
   description: "AI와 대화하며 나의 감상을 차곡차곡 보관하는 공간",
 };
 
