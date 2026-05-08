@@ -109,12 +109,12 @@ export default function HomeContent() {
       {/* 데스크탑 */}
       <div
         className="relative hidden w-full overflow-hidden md:block"
-        style={{ aspectRatio: "2752 / 1536" }}
+        style={{ aspectRatio: "2752 / 1536", maxHeight: "calc(100vh - 64px)" }}
       >
         <img
           src="/home-bg.png"
           alt="취향 책장"
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
 
         {/* 카테고리 말풍선 */}
