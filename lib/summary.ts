@@ -1,15 +1,19 @@
 import { getCurrentUser } from "@/lib/auth";
 import { ChatMessage } from "@/lib/chat";
-import { StoredNote } from "@/lib/notes";
+import { StoredNote, updateNoteSummary } from "@/lib/notes";
 
-export type StoredSummary = {
-  id: string;
-  noteId: string;
-  userId: string;
+export type GeneratedSummary = {
   title: string;
+  oneLine: string;
   body: string;
   keywords: string[];
   emotions: string[];
+};
+
+export type StoredSummary = GeneratedSummary & {
+  id: string;
+  noteId: string;
+  userId: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -25,7 +29,7 @@ const emotionRules = [
 ];
 
 const fallbackKeywords = ["감상", "기억", "장면"];
-const fallbackEmotions = ["사색"];
+const fallbackEmotions = ["사색", "여운", "호기심"];
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -63,42 +67,53 @@ export function getSummaryByNoteId(noteId: string) {
   );
 }
 
-export function createDraftSummary(note: StoredNote | null, messages: ChatMessage[]) {
+export function generateSummaryFromMessages(
+  note: StoredNote | null,
+  messages: ChatMessage[],
+): GeneratedSummary {
   const userMessages = messages.filter((message) => message.role === "user");
   const joinedText = userMessages.map((message) => message.content).join(" ");
   const keywords = extractKeywords(joinedText);
   const emotions = extractEmotions(joinedText);
-  const title = note ? `${note.title} 감상문` : "나의 감상문";
+  const noteTitle = note?.title ?? "이 작품";
+  const title = `${noteTitle} 감상문`;
 
   if (userMessages.length === 0) {
     return {
       title,
+      oneLine: "아직 대화가 충분히 쌓이지 않아 첫 감상을 기다리고 있어요.",
       body:
-        "아직 대화가 충분히 쌓이지 않았어요. AI와 감상에 대해 조금 더 이야기하면 이곳에 감상문이 정리됩니다.",
+        "AI와 작품에 대해 조금 더 이야기하면 이곳에 감상문이 정리됩니다. 가장 먼저 든 생각, 기억에 남은 장면, 지금의 나와 연결되는 부분을 천천히 적어보세요.",
       keywords,
       emotions,
     };
   }
 
-  const opening = note
-    ? `"${note.title}"을 감상한 뒤 가장 먼저 남은 것은 단순한 줄거리보다 내 안에 오래 머문 감각이었다.`
-    : "이 감상 뒤에 가장 먼저 남은 것은 단순한 줄거리보다 내 안에 오래 머문 감각이었다.";
-  const middle = userMessages
-    .slice(0, 3)
+  const firstThought = userMessages[0]?.content.trim();
+  const middleThoughts = userMessages
+    .slice(1, 4)
     .map((message) => message.content.trim())
     .filter(Boolean)
     .join(" ");
-  const closing = `이 기록을 통해 나는 ${keywords[0]}과 ${emotions[0]}의 결을 따라가며, 내가 무엇에 오래 반응하는 사람인지 조금 더 알게 되었다.`;
+  const oneLine = `${noteTitle}은 나에게 ${keywords[0]}과 ${emotions[0]}의 여운으로 남았다.`;
+  const body = [
+    `"${noteTitle}"을 감상한 뒤 가장 먼저 남은 생각은 "${firstThought}"였다.`,
+    middleThoughts
+      ? `대화를 이어가며 ${middleThoughts} 같은 감정과 장면을 다시 바라보게 되었다.`
+      : "아직 많은 말을 나누지는 않았지만, 첫 감상 안에 작품을 향한 중요한 단서가 담겨 있었다.",
+    `이 감상은 단순히 작품을 설명하는 기록이라기보다, 내가 ${keywords[0]}에 반응하고 ${emotions[0]}의 분위기를 오래 붙잡는 사람이라는 것을 보여준다.`,
+  ].join("\n\n");
 
   return {
     title,
-    body: `${opening}\n\n${middle}\n\n${closing}`,
+    oneLine,
+    body,
     keywords,
     emotions,
   };
 }
 
-export function saveSummary(noteId: string, draft: Omit<StoredSummary, "id" | "noteId" | "userId" | "createdAt" | "updatedAt">) {
+export function saveSummary(noteId: string, draft: GeneratedSummary) {
   const currentUser = getCurrentUser();
 
   if (!currentUser) {
@@ -118,6 +133,12 @@ export function saveSummary(noteId: string, draft: Omit<StoredSummary, "id" | "n
     createdAt: existingSummary?.createdAt ?? now,
     updatedAt: now,
   };
+
+  const updatedNote = updateNoteSummary(noteId, draft);
+
+  if (!updatedNote) {
+    return null;
+  }
 
   window.localStorage.setItem(
     SUMMARY_KEY,
@@ -146,16 +167,28 @@ function extractKeywords(text: string) {
   const keywords = [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([word]) => word)
-    .slice(0, 5);
+    .slice(0, 3);
 
-  return keywords.length > 0 ? keywords : fallbackKeywords;
+  return fillToThree(keywords, fallbackKeywords);
 }
 
 function extractEmotions(text: string) {
   const emotions = emotionRules
     .filter((rule) => rule.words.some((word) => text.includes(word)))
     .map((rule) => rule.tag)
-    .slice(0, 4);
+    .slice(0, 3);
 
-  return emotions.length > 0 ? emotions : fallbackEmotions;
+  return fillToThree(emotions, fallbackEmotions);
+}
+
+function fillToThree(values: string[], fallbacks: string[]) {
+  const result = [...values];
+
+  fallbacks.forEach((fallback) => {
+    if (result.length < 3 && !result.includes(fallback)) {
+      result.push(fallback);
+    }
+  });
+
+  return result.slice(0, 3);
 }

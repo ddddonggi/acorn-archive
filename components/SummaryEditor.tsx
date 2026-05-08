@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getMessagesByNoteId } from "@/lib/chat";
 import { getNoteById, StoredNote } from "@/lib/notes";
 import {
-  createDraftSummary,
+  generateSummaryFromMessages,
   getSummaryByNoteId,
   saveSummary,
   StoredSummary,
@@ -19,6 +19,7 @@ export default function SummaryEditor() {
   const noteId = searchParams.get("noteId");
   const [note, setNote] = useState<StoredNote | null>(null);
   const [title, setTitle] = useState("");
+  const [oneLine, setOneLine] = useState("");
   const [body, setBody] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
   const [emotions, setEmotions] = useState<string[]>([]);
@@ -37,13 +38,17 @@ export default function SummaryEditor() {
 
     const nextNote = getNoteById(noteId);
     const existingSummary = getSummaryByNoteId(noteId);
-    const draft = existingSummary ?? createDraftSummary(nextNote, getMessagesByNoteId(noteId));
+    const draft =
+      existingSummary ??
+      nextNote?.summary ??
+      generateSummaryFromMessages(nextNote, getMessagesByNoteId(noteId));
 
     setNote(nextNote);
     setTitle(draft.title);
+    setOneLine(draft.oneLine);
     setBody(draft.body);
-    setKeywords(draft.keywords);
-    setEmotions(draft.emotions);
+    setKeywords(draft.keywords.slice(0, 3));
+    setEmotions(draft.emotions.slice(0, 3));
     setSavedSummary(existingSummary);
   }, [noteId, router]);
 
@@ -55,23 +60,30 @@ export default function SummaryEditor() {
       value
         .split(",")
         .map((tag) => tag.trim())
-        .filter(Boolean),
+        .filter(Boolean)
+        .slice(0, 3),
     );
   }
 
   function handleSave() {
-    if (!noteId) {
+    if (!noteId || !note) {
       setMessage("정리할 노트를 찾을 수 없어요.");
       return;
     }
 
-    if (!title.trim() || !body.trim()) {
-      setMessage("제목과 감상문 내용을 입력해 주세요.");
+    if (!title.trim() || !oneLine.trim() || !body.trim()) {
+      setMessage("제목, 한 줄 감상, 감상문 본문을 모두 입력해 주세요.");
+      return;
+    }
+
+    if (keywords.length !== 3 || emotions.length !== 3) {
+      setMessage("핵심 키워드와 감정 태그를 각각 3개씩 입력해 주세요.");
       return;
     }
 
     const summary = saveSummary(noteId, {
       title: title.trim(),
+      oneLine: oneLine.trim(),
       body: body.trim(),
       keywords,
       emotions,
@@ -83,7 +95,7 @@ export default function SummaryEditor() {
     }
 
     setSavedSummary(summary);
-    setMessage("감상문이 저장되었습니다.");
+    router.push(`/${note.category}`);
   }
 
   if (!noteId) {
@@ -111,11 +123,13 @@ export default function SummaryEditor() {
             대화를 감상문으로 묶는 자리
           </h1>
           <p className="mt-4 text-[#6b4b35]">
-            {note ? `"${note.title}"에 대해 나눈 대화를 바탕으로 정리했어요.` : "저장된 노트를 확인하고 있어요."}
+            {note
+              ? `"${note.title}"에 대해 나눈 대화를 바탕으로 mock 감상문을 만들었어요.`
+              : "저장된 노트를 확인하고 있어요."}
           </p>
 
           <label className="mt-8 block text-sm font-bold text-[#5b351f]" htmlFor="summary-title">
-            감상문 제목
+            1. 제목
           </label>
           <input
             id="summary-title"
@@ -124,8 +138,18 @@ export default function SummaryEditor() {
             onChange={(event) => setTitle(event.target.value)}
           />
 
+          <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-one-line">
+            2. 한 줄 감상
+          </label>
+          <input
+            id="summary-one-line"
+            className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium text-[#5b351f] outline-none"
+            value={oneLine}
+            onChange={(event) => setOneLine(event.target.value)}
+          />
+
           <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-body">
-            감상문 내용
+            3. 감상문 본문
           </label>
           <textarea
             id="summary-body"
@@ -136,7 +160,7 @@ export default function SummaryEditor() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <label className="block text-sm font-bold text-[#5b351f]" htmlFor="summary-keywords">
-              핵심 키워드
+              4. 핵심 키워드 3개
               <input
                 id="summary-keywords"
                 className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium outline-none"
@@ -145,7 +169,7 @@ export default function SummaryEditor() {
               />
             </label>
             <label className="block text-sm font-bold text-[#5b351f]" htmlFor="summary-emotions">
-              감정 태그
+              5. 감정 태그 3개
               <input
                 id="summary-emotions"
                 className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium outline-none"
@@ -163,7 +187,7 @@ export default function SummaryEditor() {
               onClick={handleSave}
               className="rounded-2xl bg-[#8a5a2f] px-5 py-3 text-center font-bold text-[#fff8eb]"
             >
-              감상문 저장
+              저장하기
             </button>
             <Link
               href={`/notes/${noteId}`}
@@ -196,18 +220,15 @@ export default function SummaryEditor() {
             </div>
           </section>
           <section className="warm-panel rounded-[24px] p-6">
-            <h2 className="text-xl font-black text-[#3f2a1d]">저장 상태</h2>
+            <h2 className="text-xl font-black text-[#3f2a1d]">저장 위치</h2>
             <p className="mt-3 leading-7 text-[#6b4b35]">
-              {savedSummary
-                ? `마지막 저장: ${new Date(savedSummary.updatedAt).toLocaleString()}`
-                : "아직 저장되지 않은 정리본입니다."}
+              저장하면 해당 노트의 summary 정보로 보관되고, 원래 카테고리 페이지로 이동합니다.
             </p>
-            <Link
-              href="/taste"
-              className="mt-5 block rounded-2xl bg-[#697a4c] px-5 py-3 text-center font-bold text-[#fff8eb]"
-            >
-              내 종합 취향 보기
-            </Link>
+            {savedSummary ? (
+              <p className="mt-3 text-sm font-bold text-[#8a5a2f]">
+                마지막 저장: {new Date(savedSummary.updatedAt).toLocaleString()}
+              </p>
+            ) : null}
           </section>
         </aside>
       </section>

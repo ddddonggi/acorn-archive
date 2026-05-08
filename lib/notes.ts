@@ -2,6 +2,15 @@ import { getCurrentUser } from "@/lib/auth";
 
 export type NoteCategory = "music" | "media" | "video";
 
+export type NoteSummary = {
+  title: string;
+  oneLine: string;
+  body: string;
+  keywords: string[];
+  emotions: string[];
+  savedAt: string;
+};
+
 export type StoredNote = {
   id: string;
   userId: string;
@@ -9,6 +18,7 @@ export type StoredNote = {
   title: string;
   createdAt: string;
   updatedAt: string;
+  summary?: NoteSummary;
 };
 
 const NOTES_KEY = "acorn_notes";
@@ -81,4 +91,39 @@ export function createNote(category: NoteCategory, title: string) {
   window.dispatchEvent(new Event("acorn-notes-changed"));
 
   return note;
+}
+
+export function updateNoteSummary(noteId: string, summary: Omit<NoteSummary, "savedAt">) {
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const notes = getNotes();
+  const targetNote = notes.find(
+    (note) => note.id === noteId && note.userId === currentUser.username,
+  );
+
+  if (!targetNote) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  const nextNote: StoredNote = {
+    ...targetNote,
+    updatedAt: now,
+    summary: {
+      ...summary,
+      savedAt: now,
+    },
+  };
+
+  window.localStorage.setItem(
+    NOTES_KEY,
+    JSON.stringify(notes.map((note) => (note.id === noteId ? nextNote : note))),
+  );
+  window.dispatchEvent(new Event("acorn-notes-changed"));
+
+  return nextNote;
 }
