@@ -117,6 +117,7 @@ function normalizeSummary(value: unknown): SummaryResponseBody {
 
   return {
     summaryTitle: readString(candidate.summaryTitle, SUMMARY_FALLBACK.summaryTitle),
+    artist: readString(candidate.artist, SUMMARY_FALLBACK.artist),
     oneLineReview: readString(candidate.oneLineReview, SUMMARY_FALLBACK.oneLineReview),
     essay: readString(candidate.essay, SUMMARY_FALLBACK.essay).slice(0, 500),
     emotionTags: readStringArray(candidate.emotionTags, SUMMARY_FALLBACK.emotionTags),

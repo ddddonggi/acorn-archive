@@ -11,6 +11,7 @@ const categoryGuides: Record<AiNoteCategory, string> = {
 
 export const SUMMARY_FALLBACK: SummaryResponseBody = {
   summaryTitle: "아직 정리하지 못한 감상",
+  artist: "",
   oneLineReview: "조금 더 이야기를 나누면 감상이 더 선명해질 것 같아요.",
   essay:
     "아직 대화 내용이 충분하지 않아 감상문을 자세히 정리하기는 어렵지만, 사용자가 남긴 짧은 감정을 중심으로 기록을 시작할 수 있습니다.",
