@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       ].join("\n\n"),
       prompt: buildChatUserPrompt(note, recentMessages),
       temperature: 0.8,
-      maxOutputTokens: 180,
+      maxOutputTokens: 420,
     });
 
     return NextResponse.json({ message });

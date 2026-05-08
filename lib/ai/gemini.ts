@@ -9,6 +9,8 @@ type GeminiGenerateOptions = {
 
 type GeminiResponse = {
   candidates?: Array<{
+    finishReason?: string;
+    finishMessage?: string;
     content?: {
       parts?: Array<{
         text?: string;
@@ -63,10 +65,24 @@ export async function generateGeminiText({
   }
 
   const data = (await response.json()) as GeminiResponse;
-  const text = data.candidates?.[0]?.content?.parts
+  const candidate = data.candidates?.[0];
+  const finishReason = candidate?.finishReason;
+  const text = candidate?.content?.parts
     ?.map((part) => part.text ?? "")
     .join("")
     .trim();
+
+  if (finishReason && finishReason !== "STOP") {
+    throw new Error(
+      [
+        `Gemini response ended with finishReason=${finishReason}.`,
+        candidate?.finishMessage ? `finishMessage=${candidate.finishMessage}` : "",
+        text ? `partialResponse=${text}` : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
+  }
 
   if (!text) {
     throw new Error("Gemini API returned an empty response.");
