@@ -23,6 +23,7 @@ const categoryLabels = {
 export default function TasteProfile() {
   const router = useRouter();
   const [profile, setProfile] = useState<TasteProfileData>(emptyProfile);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!getCurrentUser()) {
@@ -30,17 +31,29 @@ export default function TasteProfile() {
       return;
     }
 
-    const refreshProfile = () => setProfile(generateTasteProfile());
+    async function refreshProfile() {
+      setIsLoading(true);
+      setProfile(await generateTasteProfile());
+      setIsLoading(false);
+    }
 
-    refreshProfile();
-    window.addEventListener("storage", refreshProfile);
+    void refreshProfile();
     window.addEventListener("acorn-summary-changed", refreshProfile);
 
     return () => {
-      window.removeEventListener("storage", refreshProfile);
       window.removeEventListener("acorn-summary-changed", refreshProfile);
     };
   }, [router]);
+
+  if (isLoading) {
+    return (
+      <main className="page-shell flex items-center justify-center">
+        <section className="warm-panel w-full max-w-xl rounded-[24px] p-8 text-center md:p-10">
+          <h1 className="text-4xl font-black text-[#3f2a1d]">취향 리포트를 불러오는 중이에요</h1>
+        </section>
+      </main>
+    );
+  }
 
   if (profile.summaries.length === 0) {
     return (
@@ -53,7 +66,7 @@ export default function TasteProfile() {
             아직 쌓인 도토리가 없어요
           </h1>
           <p className="mt-4 leading-8 text-[#6b4b35]">
-            AI와 나눈 대화를 감상문으로 저장하면, 이곳에 나만의 취향 리포트가 차곡차곡 쌓입니다.
+            AI와 나눈 대화를 감상문으로 저장하면 나만의 취향 리포트가 차곡차곡 쌓입니다.
           </p>
           <Link
             href="/"
@@ -79,7 +92,7 @@ export default function TasteProfile() {
                 감상들이 모여 보여주는 나의 결
               </h1>
               <p className="mt-4 max-w-3xl leading-8 text-[#6b4b35]">
-                저장된 모든 감상문 summary를 바탕으로 만든 mock 취향 분석입니다.
+                Vercel Postgres에 저장된 감상문을 바탕으로 만든 취향 리포트입니다.
               </p>
             </div>
             <section className="rounded-[22px] bg-[#5b351f] p-6 text-[#fff8eb]">
@@ -123,11 +136,11 @@ export default function TasteProfile() {
             <div>
               <h2 className="text-2xl font-black text-[#3f2a1d]">추천 콘텐츠</h2>
               <p className="mt-2 text-[#6b4b35]">
-                지금은 mock 추천이에요. 나중에 실제 AI API를 연결하면 더 섬세하게 바꿀 수 있습니다.
+                지금은 저장된 감상 분위기를 바탕으로 한 간단한 추천이에요.
               </p>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {profile.recommendations.map((recommendation) => (
                 <article key={recommendation.title} className="rounded-[18px] border border-[#8a5a2f]/15 bg-[#fbf1dd] p-5">
                   <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#697a4c]">

@@ -1,78 +1,45 @@
-export type StoredUser = {
+export type CurrentUser = {
   username: string;
-  password: string;
-  createdAt: string;
+  loggedInAt: string;
 };
 
-const USERS_KEY = "acorn_users";
+type AuthResult = {
+  ok: boolean;
+  message: string;
+  user?: CurrentUser;
+};
+
 const CURRENT_USER_KEY = "acorn_current_user";
 
 function isBrowser() {
   return typeof window !== "undefined";
 }
 
-export function getUsers(): StoredUser[] {
-  if (!isBrowser()) {
-    return [];
-  }
+export async function signup(username: string, password: string): Promise<AuthResult> {
+  const response = await fetch("/api/auth/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: username.trim(), password }),
+  });
+  const result = (await response.json()) as AuthResult;
 
-  const rawUsers = window.localStorage.getItem(USERS_KEY);
-
-  if (!rawUsers) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(rawUsers) as StoredUser[];
-  } catch {
-    return [];
-  }
+  return result;
 }
 
-export function signup(username: string, password: string) {
-  if (!isBrowser()) {
-    return { ok: false, message: "브라우저 환경에서만 회원가입할 수 있습니다." };
+export async function login(username: string, password: string): Promise<AuthResult> {
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: username.trim(), password }),
+  });
+  const result = (await response.json()) as AuthResult;
+
+  if (result.ok && result.user && isBrowser()) {
+    window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(result.user));
+    window.dispatchEvent(new Event("acorn-auth-changed"));
   }
 
-  const users = getUsers();
-  const trimmedUsername = username.trim();
-
-  if (users.some((user) => user.username === trimmedUsername)) {
-    return { ok: false, message: "이미 사용 중인 아이디입니다." };
-  }
-
-  const nextUser: StoredUser = {
-    username: trimmedUsername,
-    password,
-    createdAt: new Date().toISOString(),
-  };
-
-  window.localStorage.setItem(USERS_KEY, JSON.stringify([...users, nextUser]));
-  return { ok: true, message: "회원가입이 완료되었습니다." };
-}
-
-export function login(username: string, password: string) {
-  if (!isBrowser()) {
-    return { ok: false, message: "브라우저 환경에서만 로그인할 수 있습니다." };
-  }
-
-  const trimmedUsername = username.trim();
-  const user = getUsers().find(
-    (storedUser) =>
-      storedUser.username === trimmedUsername && storedUser.password === password,
-  );
-
-  if (!user) {
-    return { ok: false, message: "아이디 또는 비밀번호를 확인해 주세요." };
-  }
-
-  window.localStorage.setItem(
-    CURRENT_USER_KEY,
-    JSON.stringify({ username: user.username, loggedInAt: new Date().toISOString() }),
-  );
-
-  window.dispatchEvent(new Event("acorn-auth-changed"));
-  return { ok: true, message: "로그인되었습니다." };
+  return result;
 }
 
 export function logout() {
@@ -96,7 +63,7 @@ export function getCurrentUser() {
   }
 
   try {
-    return JSON.parse(rawUser) as { username: string; loggedInAt: string };
+    return JSON.parse(rawUser) as CurrentUser;
   } catch {
     return null;
   }

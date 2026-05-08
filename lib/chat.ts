@@ -11,74 +11,43 @@ export type ChatMessage = {
   createdAt: string;
 };
 
-const CHAT_KEY = "acorn_chat_messages";
-
-function isBrowser() {
-  return typeof window !== "undefined";
-}
-
-export function getAllMessages(): ChatMessage[] {
-  if (!isBrowser()) {
-    return [];
-  }
-
-  const rawMessages = window.localStorage.getItem(CHAT_KEY);
-
-  if (!rawMessages) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(rawMessages) as ChatMessage[];
-  } catch {
-    return [];
-  }
-}
-
-export function getMessagesByNoteId(noteId: string) {
+export async function getMessagesByNoteId(noteId: string) {
   const currentUser = getCurrentUser();
 
   if (!currentUser) {
     return [];
   }
 
-  return getAllMessages()
-    .filter((message) => message.noteId === noteId && message.userId === currentUser.username)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const response = await fetch(
+    `/api/messages?username=${encodeURIComponent(currentUser.username)}&noteId=${encodeURIComponent(noteId)}`,
+  );
+  const data = (await response.json()) as { messages?: ChatMessage[] };
+
+  return data.messages ?? [];
 }
 
-export function saveMessages(nextMessages: ChatMessage[]) {
-  if (!isBrowser()) {
-    return;
+export async function appendMessages(
+  noteId: string,
+  messages: Pick<ChatMessage, "role" | "content">[],
+) {
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    return [];
   }
 
-  window.localStorage.setItem(CHAT_KEY, JSON.stringify(nextMessages));
+  const response = await fetch("/api/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: currentUser.username,
+      noteId,
+      messages,
+    }),
+  });
+  const data = (await response.json()) as { messages?: ChatMessage[] };
+
   window.dispatchEvent(new Event("acorn-chat-changed"));
-}
 
-export function appendMessages(noteId: string, messages: Pick<ChatMessage, "role" | "content">[]) {
-  if (!isBrowser()) {
-    return [];
-  }
-
-  const currentUser = getCurrentUser();
-
-  if (!currentUser) {
-    return [];
-  }
-
-  const now = Date.now();
-  const nextMessages: ChatMessage[] = messages.map((message, index) => ({
-    id: `${noteId}-${now}-${index}`,
-    noteId,
-    userId: currentUser.username,
-    role: message.role,
-    content: message.content,
-    createdAt: new Date(now + index).toISOString(),
-  }));
-
-  const allMessages = getAllMessages();
-  saveMessages([...allMessages, ...nextMessages]);
-
-  return nextMessages;
+  return data.messages ?? [];
 }

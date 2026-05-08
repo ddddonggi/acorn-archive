@@ -41,11 +41,15 @@ export default function AiChat({ noteId }: AiChatProps) {
       return;
     }
 
-    const nextNote = getNoteById(noteId);
-    const savedMessages = getMessagesByNoteId(noteId);
+    async function loadChat() {
+      const nextNote = await getNoteById(noteId);
+      const savedMessages = await getMessagesByNoteId(noteId);
 
-    setNote(nextNote);
-    setMessages(savedMessages);
+      setNote(nextNote);
+      setMessages(savedMessages);
+    }
+
+    void loadChat();
   }, [noteId, router]);
 
   useEffect(() => {
@@ -106,8 +110,8 @@ export default function AiChat({ noteId }: AiChatProps) {
       }
 
       const assistantMessage = data.message || fallbackMessage;
-      appendMessages(noteId, [{ role: "assistant", content: assistantMessage }]);
-      setMessages(getMessagesByNoteId(noteId));
+      await appendMessages(noteId, [{ role: "assistant", content: assistantMessage }]);
+      setMessages(await getMessagesByNoteId(noteId));
     } catch (error) {
       setDebugInfo({
         screen: "AI 대화 페이지",
@@ -129,7 +133,7 @@ export default function AiChat({ noteId }: AiChatProps) {
       return;
     }
 
-    const userMessages = appendMessages(noteId, [{ role: "user", content }]);
+    const userMessages = await appendMessages(noteId, [{ role: "user", content }]);
     const nextMessages = [...messages, ...userMessages];
 
     setMessages(nextMessages);

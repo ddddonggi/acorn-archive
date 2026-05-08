@@ -40,28 +40,33 @@ export default function SummaryEditor() {
       return;
     }
 
-    const nextNote = getNoteById(noteId);
-    const existingSummary = getSummaryByNoteId(noteId);
-    const noteSummary = nextNote?.summary;
+    const targetNoteId = noteId;
 
-    setNote(nextNote);
+    async function loadSummary() {
+      const nextNote = await getNoteById(targetNoteId);
+      const existingSummary = await getSummaryByNoteId(targetNoteId);
+      const noteSummary = nextNote?.summary;
+      const draft = existingSummary ?? noteSummary;
 
-    const draft = existingSummary ?? noteSummary;
+      setNote(nextNote);
 
-    if (draft) {
-      setSummaryTitle(draft.summaryTitle);
-      setOneLineReview(draft.oneLineReview);
-      setEssay(draft.essay);
-      setKeywords(draft.keywords.slice(0, 3));
-      setEmotionTags(draft.emotionTags.slice(0, 3));
-      setTasteHint(draft.tasteHint);
-      setSavedSummary(existingSummary);
-      return;
+      if (draft) {
+        setSummaryTitle(draft.summaryTitle);
+        setOneLineReview(draft.oneLineReview);
+        setEssay(draft.essay);
+        setKeywords(draft.keywords.slice(0, 3));
+        setEmotionTags(draft.emotionTags.slice(0, 3));
+        setTasteHint(draft.tasteHint);
+        setSavedSummary(existingSummary);
+        return;
+      }
+
+      if (nextNote) {
+        await requestSummary(nextNote, targetNoteId);
+      }
     }
 
-    if (nextNote) {
-      void requestSummary(nextNote, noteId);
-    }
+    void loadSummary();
   }, [noteId, router]);
 
   const keywordText = useMemo(() => keywords.join(", "), [keywords]);
@@ -71,7 +76,7 @@ export default function SummaryEditor() {
     setIsLoading(true);
     setMessage("");
 
-    const messages = getMessagesByNoteId(targetNoteId);
+    const messages = await getMessagesByNoteId(targetNoteId);
     const requestBody = {
       note: {
         id: targetNote.id,
@@ -141,7 +146,7 @@ export default function SummaryEditor() {
     );
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!noteId || !note) {
       setMessage("정리할 노트를 찾을 수 없어요.");
       return;
@@ -157,7 +162,7 @@ export default function SummaryEditor() {
       return;
     }
 
-    const summary = saveSummary(noteId, {
+    const summary = await saveSummary(noteId, {
       summaryTitle: summaryTitle.trim(),
       oneLineReview: oneLineReview.trim(),
       essay: essay.trim(),
@@ -332,7 +337,7 @@ export default function SummaryEditor() {
           <section className="warm-panel rounded-[24px] p-6">
             <h2 className="text-xl font-black text-[#3f2a1d]">저장 위치</h2>
             <p className="mt-3 leading-7 text-[#6b4b35]">
-              저장하면 해당 노트의 summary 정보로 보관되고, 원래 카테고리 페이지로 이동합니다.
+              저장하면 해당 노트의 summary 정보로 Vercel Postgres에 보관되고, 원래 카테고리 페이지로 이동합니다.
             </p>
             {savedSummary ? (
               <p className="mt-3 text-sm font-bold text-[#8a5a2f]">

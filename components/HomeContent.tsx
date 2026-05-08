@@ -8,19 +8,19 @@ const categories = [
   {
     href: "/music",
     title: "음악",
-    description: "LP판처럼 오래 맴도는 감상을 남겨요.",
+    description: "LP처럼 오래 맴도는 감상을 남겨요.",
     visual: "LP",
   },
   {
     href: "/media",
     title: "미디어",
-    description: "책장 한 칸에 생각의 조각을 꽂아둬요.",
+    description: "책장 한 칸에 생각의 조각을 꽂아두어요.",
     visual: "BOOK",
   },
   {
     href: "/video",
     title: "영상",
-    description: "작은 TV 앞에서 떠오른 마음을 기록해요.",
+    description: "작은 TV 앞에서 남은 장면을 기록해요.",
     visual: "TV",
   },
 ];
@@ -49,8 +49,7 @@ export default function HomeContent() {
               생각을 대신하지 않고, 생각이 나오도록 곁에 앉는 공간.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-[#6b4b35]">
-              음악, 책, 영상을 보고 난 뒤 AI와 친구처럼 대화하고 나만의 감상문으로
-              차곡차곡 저장해요.
+              음악, 책, 영상을 보고 난 뒤 AI와 친구처럼 대화하고 나만의 감상문으로 차곡차곡 저장해요.
             </p>
           </div>
           <div className="warm-panel rounded-[28px] p-5">

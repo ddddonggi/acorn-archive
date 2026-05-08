@@ -17,117 +17,55 @@ export type StoredNote = {
   summary?: NoteSummary;
 };
 
-const NOTES_KEY = "acorn_notes";
-
-function isBrowser() {
-  return typeof window !== "undefined";
-}
-
-export function getNotes(): StoredNote[] {
-  if (!isBrowser()) {
-    return [];
-  }
-
-  const rawNotes = window.localStorage.getItem(NOTES_KEY);
-
-  if (!rawNotes) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(rawNotes) as StoredNote[];
-  } catch {
-    return [];
-  }
-}
-
-export function getNotesByCategory(category: NoteCategory) {
+export async function getNotesByCategory(category: NoteCategory) {
   const currentUser = getCurrentUser();
 
   if (!currentUser) {
     return [];
   }
 
-  return getNotes()
-    .filter((note) => note.userId === currentUser.username && note.category === category)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-export function getNoteById(noteId: string) {
-  const currentUser = getCurrentUser();
-
-  if (!currentUser) {
-    return null;
-  }
-
-  return (
-    getNotes().find((note) => note.id === noteId && note.userId === currentUser.username) ??
-    null
+  const response = await fetch(
+    `/api/notes?username=${encodeURIComponent(currentUser.username)}&category=${category}`,
   );
+  const data = (await response.json()) as { notes?: StoredNote[] };
+
+  return data.notes ?? [];
 }
 
-export function createNote(category: NoteCategory, title: string) {
-  if (!isBrowser()) {
-    return null;
-  }
-
+export async function getNoteById(noteId: string) {
   const currentUser = getCurrentUser();
 
   if (!currentUser) {
     return null;
   }
 
-  const now = new Date().toISOString();
-  const note: StoredNote = {
-    id: `${category}-${Date.now()}`,
-    userId: currentUser.username,
-    category,
-    title: title.trim(),
-    createdAt: now,
-    updatedAt: now,
-  };
+  const response = await fetch(
+    `/api/notes/${encodeURIComponent(noteId)}?username=${encodeURIComponent(currentUser.username)}`,
+  );
+  const data = (await response.json()) as { note?: StoredNote | null };
 
-  window.localStorage.setItem(NOTES_KEY, JSON.stringify([...getNotes(), note]));
+  return data.note ?? null;
+}
+
+export async function createNote(category: NoteCategory, title: string) {
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const response = await fetch("/api/notes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: currentUser.username,
+      category,
+      title: title.trim(),
+    }),
+  });
+  const data = (await response.json()) as { note?: StoredNote | null };
+
   window.dispatchEvent(new Event("acorn-notes-changed"));
 
-  return note;
-}
-
-export function updateNoteSummary(noteId: string, summary: GeneratedSummary) {
-  if (!isBrowser()) {
-    return null;
-  }
-
-  const currentUser = getCurrentUser();
-
-  if (!currentUser) {
-    return null;
-  }
-
-  const notes = getNotes();
-  const targetNote = notes.find(
-    (note) => note.id === noteId && note.userId === currentUser.username,
-  );
-
-  if (!targetNote) {
-    return null;
-  }
-
-  const now = new Date().toISOString();
-  const nextNote: StoredNote = {
-    ...targetNote,
-    updatedAt: now,
-    summary: {
-      ...summary,
-      savedAt: now,
-    },
-  };
-
-  window.localStorage.setItem(
-    NOTES_KEY,
-    JSON.stringify(notes.map((note) => (note.id === noteId ? nextNote : note))),
-  );
-  window.dispatchEvent(new Event("acorn-notes-changed"));
-
-  return nextNote;
+  return data.note ?? null;
 }

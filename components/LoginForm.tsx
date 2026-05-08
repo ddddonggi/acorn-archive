@@ -10,8 +10,9 @@ export default function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!username.trim() || !password) {
@@ -19,8 +20,10 @@ export default function LoginForm() {
       return;
     }
 
-    const result = login(username, password);
+    setIsSubmitting(true);
+    const result = await login(username, password);
     setMessage(result.message);
+    setIsSubmitting(false);
 
     if (result.ok) {
       router.push("/");
@@ -49,9 +52,10 @@ export default function LoginForm() {
           {message ? <p className="text-sm font-semibold text-[#8a5a2f]">{message}</p> : null}
           <button
             type="submit"
-            className="block w-full rounded-2xl bg-[#8a5a2f] px-4 py-3 text-center font-bold text-[#fff8eb]"
+            disabled={isSubmitting}
+            className="block w-full rounded-2xl bg-[#8a5a2f] px-4 py-3 text-center font-bold text-[#fff8eb] disabled:opacity-60"
           >
-            로그인하고 홈으로
+            {isSubmitting ? "확인 중..." : "로그인하고 홈으로"}
           </button>
         </form>
         <Link href="/signup" className="mt-5 block text-center text-sm font-semibold text-[#697a4c]">

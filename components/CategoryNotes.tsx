@@ -24,6 +24,7 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!getCurrentUser()) {
@@ -31,14 +32,17 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
       return;
     }
 
-    const refreshNotes = () => setNotes(getNotesByCategory(categoryKey));
+    void refreshNotes();
 
-    refreshNotes();
-    window.addEventListener("storage", refreshNotes);
+    async function refreshNotes() {
+      setIsLoading(true);
+      setNotes(await getNotesByCategory(categoryKey));
+      setIsLoading(false);
+    }
+
     window.addEventListener("acorn-notes-changed", refreshNotes);
 
     return () => {
-      window.removeEventListener("storage", refreshNotes);
       window.removeEventListener("acorn-notes-changed", refreshNotes);
     };
   }, [categoryKey, router]);
@@ -55,7 +59,7 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
     setMessage("");
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!title.trim()) {
@@ -63,14 +67,14 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
       return;
     }
 
-    const note = createNote(categoryKey, title);
+    const note = await createNote(categoryKey, title);
 
     if (!note) {
       router.push("/login");
       return;
     }
 
-    setNotes(getNotesByCategory(categoryKey));
+    setNotes(await getNotesByCategory(categoryKey));
     closeModal();
   }
 
@@ -95,7 +99,11 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
           </button>
         </div>
 
-        {notes.length > 0 ? (
+        {isLoading ? (
+          <div className="warm-panel mt-10 rounded-[24px] p-8 text-center">
+            <p className="text-xl font-black text-[#3f2a1d]">노트를 불러오는 중이에요...</p>
+          </div>
+        ) : notes.length > 0 ? (
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {notes.map((note) => (
               <Link
@@ -116,7 +124,7 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
           </div>
         ) : (
           <div className="warm-panel mt-10 rounded-[24px] p-8 text-center">
-            <p className="text-xl font-black text-[#3f2a1d]">아직 감상 노트가 없어요.</p>
+            <p className="text-xl font-black text-[#3f2a1d]">아직 감상 노트가 없어요</p>
             <p className="mt-3 text-[#6b4b35]">+ 버튼을 눌러 첫 번째 감상을 보관해 보세요.</p>
           </div>
         )}

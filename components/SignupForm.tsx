@@ -11,8 +11,9 @@ export default function SignupForm() {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!username.trim() || !password || !passwordConfirm) {
@@ -25,8 +26,10 @@ export default function SignupForm() {
       return;
     }
 
-    const result = signup(username, password);
+    setIsSubmitting(true);
+    const result = await signup(username, password);
     setMessage(result.message);
+    setIsSubmitting(false);
 
     if (result.ok) {
       router.push("/login");
@@ -62,9 +65,10 @@ export default function SignupForm() {
           {message ? <p className="text-sm font-semibold text-[#8a5a2f]">{message}</p> : null}
           <button
             type="submit"
-            className="block w-full rounded-2xl bg-[#8a5a2f] px-4 py-3 text-center font-bold text-[#fff8eb]"
+            disabled={isSubmitting}
+            className="block w-full rounded-2xl bg-[#8a5a2f] px-4 py-3 text-center font-bold text-[#fff8eb] disabled:opacity-60"
           >
-            가입하고 로그인으로
+            {isSubmitting ? "저장 중..." : "가입하고 로그인으로"}
           </button>
         </form>
         <Link href="/login" className="mt-5 block text-center text-sm font-semibold text-[#697a4c]">
