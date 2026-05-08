@@ -22,6 +22,21 @@ AI와 친구처럼 대화하며 음악, 미디어, 영상 감상을 기록하고
 - `/summary?noteId=...` 감상문 정리
 - `/taste` 내 종합 취향
 
+## OpenAI API 키 설정
+
+실제 API 키는 OpenAI Platform에서 직접 발급해야 합니다.
+
+1. OpenAI Platform의 API keys 페이지에서 새 키를 발급합니다.
+2. 로컬 개발에서는 `.env.local` 파일에 아래처럼 넣습니다.
+
+```bash
+OPENAI_API_KEY=sk-...
+```
+
+3. Vercel 배포에서는 Project Settings > Environment Variables에 `OPENAI_API_KEY`를 추가합니다.
+
+`.env.local`은 Git에 커밋되지 않도록 `.gitignore`에 포함되어 있습니다. 공유 저장소에는 실제 키를 올리지 마세요.
+
 ## 로컬 실행
 
 ```bash
