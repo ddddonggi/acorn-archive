@@ -1,8 +1,8 @@
 import { getCurrentUser } from "@/lib/auth";
-import { getNotes, NoteCategory } from "@/lib/notes";
+import { NoteCategory } from "@/lib/notes";
 import { getSummaries, StoredSummary } from "@/lib/summary";
 
-export type TasteEmotion = {
+export type TasteCount = {
   label: string;
   count: number;
 };
@@ -15,16 +15,10 @@ export type TasteRecommendation = {
 
 export type TasteProfile = {
   summaries: StoredSummary[];
-  frequentEmotions: TasteEmotion[];
-  favoriteMood: string;
-  keywords: string[];
+  emotionTags: TasteCount[];
+  keywords: TasteCount[];
+  oneLineSummary: string;
   recommendations: TasteRecommendation[];
-};
-
-const categoryLabels: Record<NoteCategory, string> = {
-  music: "음악",
-  media: "미디어",
-  video: "영상",
 };
 
 const recommendationPool: Record<string, TasteRecommendation[]> = {
@@ -108,40 +102,41 @@ const defaultRecommendations: TasteRecommendation[] = [
   },
 ];
 
-export function buildTasteProfile(): TasteProfile {
+export function generateTasteProfile(): TasteProfile {
   const currentUser = getCurrentUser();
 
   if (!currentUser) {
-    return {
-      summaries: [],
-      frequentEmotions: [],
-      favoriteMood: "로그인 후 저장된 감상문을 바탕으로 취향을 보여드릴게요.",
-      keywords: [],
-      recommendations: defaultRecommendations,
-    };
+    return createEmptyProfile();
   }
 
   const summaries = getSummaries().filter(
     (summary) => summary.userId === currentUser.username,
   );
-  const notes = getNotes().filter((note) => note.userId === currentUser.username);
-  const frequentEmotions = countItems(summaries.flatMap((summary) => summary.emotions));
-  const keywords = countItems(summaries.flatMap((summary) => summary.keywords))
-    .map((item) => item.label)
-    .slice(0, 8);
-  const favoriteMood = createFavoriteMood(summaries, frequentEmotions, notes);
-  const recommendations = createRecommendations(frequentEmotions);
+  const emotionTags = countItems(summaries.flatMap((summary) => summary.emotions));
+  const keywords = countItems(summaries.flatMap((summary) => summary.keywords));
+  const oneLineSummary = createOneLineSummary(summaries, emotionTags, keywords);
+  const recommendations = createRecommendations(emotionTags);
 
   return {
     summaries,
-    frequentEmotions,
-    favoriteMood,
+    emotionTags,
     keywords,
+    oneLineSummary,
     recommendations,
   };
 }
 
-function countItems(items: string[]): TasteEmotion[] {
+function createEmptyProfile(): TasteProfile {
+  return {
+    summaries: [],
+    emotionTags: [],
+    keywords: [],
+    oneLineSummary: "",
+    recommendations: defaultRecommendations,
+  };
+}
+
+function countItems(items: string[]): TasteCount[] {
   const counts = new Map<string, number>();
 
   items
@@ -156,39 +151,22 @@ function countItems(items: string[]): TasteEmotion[] {
     .map(([label, count]) => ({ label, count }));
 }
 
-function createFavoriteMood(
+function createOneLineSummary(
   summaries: StoredSummary[],
-  emotions: TasteEmotion[],
-  notes: ReturnType<typeof getNotes>,
+  emotions: TasteCount[],
+  keywords: TasteCount[],
 ) {
   if (summaries.length === 0) {
-    return "아직 저장된 감상문이 없어요. 대화를 감상문으로 저장하면 이곳에 나만의 분위기가 쌓입니다.";
+    return "";
   }
 
   const topEmotion = emotions[0]?.label ?? "사색";
-  const topCategory = findTopCategory(notes);
-  const topKeyword = countItems(summaries.flatMap((summary) => summary.keywords))[0]?.label;
+  const topKeyword = keywords[0]?.label ?? "기억";
 
-  if (topKeyword) {
-    return `${categoryLabels[topCategory]}에서 시작한 감상을 ${topEmotion}의 결로 오래 바라보고, "${topKeyword}" 같은 단어에 자주 마음이 닿는 편이에요.`;
-  }
-
-  return `${categoryLabels[topCategory]} 감상에서 ${topEmotion}의 분위기를 자주 붙잡는 편이에요.`;
+  return `나는 ${topEmotion}의 결을 오래 붙잡고, "${topKeyword}" 같은 단서에서 감상을 깊게 펼치는 편이에요.`;
 }
 
-function findTopCategory(notes: ReturnType<typeof getNotes>) {
-  const counts = new Map<NoteCategory, number>();
-
-  notes.forEach((note) => {
-    counts.set(note.category, (counts.get(note.category) ?? 0) + 1);
-  });
-
-  return (
-    [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "media"
-  );
-}
-
-function createRecommendations(emotions: TasteEmotion[]) {
+function createRecommendations(emotions: TasteCount[]) {
   const recommendations = emotions
     .flatMap((emotion) => recommendationPool[emotion.label] ?? [])
     .slice(0, 4);
