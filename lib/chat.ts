@@ -48,11 +48,19 @@ export function getMessagesByNoteId(noteId: string) {
 }
 
 export function saveMessages(nextMessages: ChatMessage[]) {
+  if (!isBrowser()) {
+    return;
+  }
+
   window.localStorage.setItem(CHAT_KEY, JSON.stringify(nextMessages));
   window.dispatchEvent(new Event("acorn-chat-changed"));
 }
 
 export function appendMessages(noteId: string, messages: Pick<ChatMessage, "role" | "content">[]) {
+  if (!isBrowser()) {
+    return [];
+  }
+
   const currentUser = getCurrentUser();
 
   if (!currentUser) {

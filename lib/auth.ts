@@ -30,6 +30,10 @@ export function getUsers(): StoredUser[] {
 }
 
 export function signup(username: string, password: string) {
+  if (!isBrowser()) {
+    return { ok: false, message: "브라우저 환경에서만 회원가입할 수 있습니다." };
+  }
+
   const users = getUsers();
   const trimmedUsername = username.trim();
 
@@ -48,6 +52,10 @@ export function signup(username: string, password: string) {
 }
 
 export function login(username: string, password: string) {
+  if (!isBrowser()) {
+    return { ok: false, message: "브라우저 환경에서만 로그인할 수 있습니다." };
+  }
+
   const trimmedUsername = username.trim();
   const user = getUsers().find(
     (storedUser) =>

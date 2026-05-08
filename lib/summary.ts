@@ -114,6 +114,10 @@ export function generateSummaryFromMessages(
 }
 
 export function saveSummary(noteId: string, draft: GeneratedSummary) {
+  if (!isBrowser()) {
+    return null;
+  }
+
   const currentUser = getCurrentUser();
 
   if (!currentUser) {

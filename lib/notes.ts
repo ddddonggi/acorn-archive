@@ -71,6 +71,10 @@ export function getNoteById(noteId: string) {
 }
 
 export function createNote(category: NoteCategory, title: string) {
+  if (!isBrowser()) {
+    return null;
+  }
+
   const currentUser = getCurrentUser();
 
   if (!currentUser) {
@@ -94,6 +98,10 @@ export function createNote(category: NoteCategory, title: string) {
 }
 
 export function updateNoteSummary(noteId: string, summary: Omit<NoteSummary, "savedAt">) {
+  if (!isBrowser()) {
+    return null;
+  }
+
   const currentUser = getCurrentUser();
 
   if (!currentUser) {
