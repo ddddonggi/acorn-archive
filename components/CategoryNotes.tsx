@@ -6,9 +6,27 @@ import { getCurrentUser } from "@/lib/auth";
 import { createNote, getNotesByCategory, NoteCategory, StoredNote, uploadNoteImage } from "@/lib/notes";
 
 const NOTES_PER_PAGE = 18;
-const SHELF_ROW_HEIGHT = 172; // px, height of each of the 3 shelf rows
-const SHELF_DIVIDER = 13;     // px, thickness of shelf boards and vertical dividers
-const SHELF_FRAME = 20;       // px, outer frame padding
+
+const TEMPLATE: Record<NoteCategory, string> = {
+  music: "/image_music.png",
+  media: "/back_media.png",
+  video: "/image_poster.png",
+};
+
+// Shelf overlay geometry — percentages of the bookshelf.png image (2752×1536)
+// Adjust if the grid doesn't line up with the shelf cells
+const SHELF = {
+  left: "13%",
+  top: "14%",
+  right: "13%",
+  bottom: "18%",
+  columnGap: "1.4%",
+  rowGap: "1.4%",
+  // Vertical center of shelf row 1 (as % of full image height) — for nav arrows
+  row1CenterTop: "48%",
+  arrowInset: "6.5%",  // left/right inset of nav arrows from image edge
+  arrowSize: "3.2%",   // arrow button width (aspect-ratio 1:1)
+} as const;
 
 type CategoryCopy = {
   label: string;
@@ -22,116 +40,6 @@ type CategoryNotesProps = {
   category: CategoryCopy;
 };
 
-// ─── SVG Note Templates ──────────────────────────────────────────────────────
-
-function MusicNote({ note }: { note: StoredNote }) {
-  const id = note.id.replace(/[^a-z0-9]/gi, "");
-  const imageUrl = note.imageUrl;
-  return (
-    <svg viewBox="0 0 150 90" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
-      <defs>
-        <clipPath id={`aClip-${id}`}>
-          <rect x="2" y="5" width="70" height="70" rx="3" />
-        </clipPath>
-      </defs>
-      {/* Vinyl record — rendered first (behind sleeve) */}
-      <circle cx="108" cy="45" r="42" fill="#1c1c1c" />
-      {[36, 30, 24, 18, 12].map((r) => (
-        <circle key={r} cx="108" cy="45" r={r} fill="none" stroke="#2e2e2e" strokeWidth="0.8" />
-      ))}
-      {/* Center label */}
-      <circle cx="108" cy="45" r="10" fill="#d95f2b" />
-      <circle cx="108" cy="45" r="5.5" fill="#6db83a" />
-      <circle cx="108" cy="45" r="2" fill="#111" />
-      {/* Album sleeve (in front) */}
-      <rect x="2" y="5" width="70" height="70" rx="3" fill="white" stroke="#d0d0d0" strokeWidth="1.5" />
-      {imageUrl && (
-        <image
-          href={imageUrl}
-          x="2" y="5" width="70" height="70"
-          preserveAspectRatio="xMidYMid slice"
-          clipPath={`url(#aClip-${id})`}
-        />
-      )}
-      {/* Sleeve edge shadow */}
-      <rect x="2" y="5" width="70" height="70" rx="3" fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="3" />
-    </svg>
-  );
-}
-
-function MediaNote({ note }: { note: StoredNote }) {
-  const id = note.id.replace(/[^a-z0-9]/gi, "");
-  const imageUrl = note.imageUrl;
-  return (
-    <svg viewBox="0 0 78 112" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
-      <defs>
-        <clipPath id={`bClip-${id}`}>
-          <rect x="11" y="2" width="65" height="108" rx="2" />
-        </clipPath>
-        <linearGradient id={`bSpine-${id}`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="rgba(0,0,0,0.22)" />
-          <stop offset="100%" stopColor="transparent" />
-        </linearGradient>
-      </defs>
-      {/* Book body */}
-      <rect x="11" y="2" width="65" height="108" rx="2" fill="white" stroke="#d4d4d4" strokeWidth="1.5" />
-      {imageUrl && (
-        <image
-          href={imageUrl}
-          x="11" y="2" width="65" height="108"
-          preserveAspectRatio="xMidYMid slice"
-          clipPath={`url(#bClip-${id})`}
-        />
-      )}
-      {/* Spine */}
-      <rect x="2" y="4" width="11" height="104" rx="2" fill="#ececec" stroke="#d4d4d4" strokeWidth="1" />
-      {/* Spine shadow on body */}
-      <rect x="11" y="4" width="7" height="104" fill={`url(#bSpine-${id})`} />
-      {/* 띠지 (band) — only when image is present */}
-      {imageUrl && (
-        <>
-          <rect x="11" y="40" width="65" height="32" fill="rgba(255,255,255,0.88)" />
-          <line x1="11" y1="43" x2="76" y2="43" stroke="#aaa" strokeWidth="0.6" />
-          <line x1="11" y1="69" x2="76" y2="69" stroke="#aaa" strokeWidth="0.6" />
-        </>
-      )}
-    </svg>
-  );
-}
-
-function VideoNote({ note }: { note: StoredNote }) {
-  const id = note.id.replace(/[^a-z0-9]/gi, "");
-  const imageUrl = note.imageUrl;
-  return (
-    <svg viewBox="0 0 78 112" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
-      <defs>
-        <clipPath id={`cClip-${id}`}>
-          <rect x="13" y="13" width="52" height="86" />
-        </clipPath>
-      </defs>
-      {/* Outer frame */}
-      <rect x="2" y="2" width="74" height="108" rx="3" fill="white" stroke="#1c1c1c" strokeWidth="2.5" />
-      {/* Inner decorative border */}
-      <rect x="7" y="7" width="64" height="98" rx="1" fill="none" stroke="#2c2c2c" strokeWidth="1.2" />
-      {/* Picture area */}
-      <rect x="13" y="13" width="52" height="86" fill="#f2f2f2" />
-      {imageUrl && (
-        <image
-          href={imageUrl}
-          x="13" y="13" width="52" height="86"
-          preserveAspectRatio="xMidYMid slice"
-          clipPath={`url(#cClip-${id})`}
-        />
-      )}
-      {/* Corner brackets */}
-      <path d="M7,7 L15,7 M7,7 L7,15" stroke="#222" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <path d="M71,7 L63,7 M71,7 L71,15" stroke="#222" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <path d="M7,105 L15,105 M7,105 L7,97" stroke="#222" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <path d="M71,105 L63,105 M71,105 L71,97" stroke="#222" strokeWidth="2" fill="none" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 // ─── Note Slot ───────────────────────────────────────────────────────────────
 
 function NoteSlot({
@@ -143,36 +51,99 @@ function NoteSlot({
   categoryKey: NoteCategory;
   onSelect: (n: StoredNote) => void;
 }) {
-  if (!note) return <div style={{ width: "100%", height: "100%" }} />;
+  if (!note) return <div style={{ flex: 1, height: "100%" }} />;
+
+  const templateSrc = TEMPLATE[categoryKey];
+  const hasImage = !!note.imageUrl;
+
+  // CSS mask aligns with object-fit: contain + object-position: bottom center
+  const maskStyle: React.CSSProperties = hasImage
+    ? {
+        maskImage: `url(${templateSrc})`,
+        maskSize: "contain",
+        maskPosition: "bottom center",
+        maskRepeat: "no-repeat",
+        WebkitMaskImage: `url(${templateSrc})`,
+        WebkitMaskSize: "contain",
+        WebkitMaskPosition: "bottom center",
+        WebkitMaskRepeat: "no-repeat",
+      }
+    : {};
 
   return (
     <div
-      className="relative flex flex-col items-center justify-end cursor-pointer group"
-      style={{ width: "100%", height: "100%", paddingBottom: "2px" }}
+      className="group relative flex items-end justify-center cursor-pointer"
+      style={{ flex: 1, height: "100%", paddingBottom: "2px" }}
       onClick={() => onSelect(note)}
     >
-      {/* Note graphic */}
+      {/* Card — isolation prevents shelf from polluting the multiply blend */}
       <div
-        className="transition-transform duration-150 group-hover:scale-105 group-hover:-translate-y-1"
-        style={{ width: "88%", height: "88%" }}
+        className="relative transition-transform duration-150 group-hover:scale-105 group-hover:-translate-y-1"
+        style={{ width: "88%", height: "90%", isolation: "isolate" }}
       >
-        {categoryKey === "music" && <MusicNote note={note} />}
-        {categoryKey === "media" && <MediaNote note={note} />}
-        {categoryKey === "video" && <VideoNote note={note} />}
-      </div>
-      {/* Title overlay */}
-      <div
-        className="absolute bottom-0.5 left-0 right-0 flex justify-center pointer-events-none px-0.5"
-      >
-        <span
-          className="text-white font-bold text-center leading-tight drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]"
+        {/* User image masked to the note's transparent-background shape */}
+        {hasImage && (
+          <img
+            src={note.imageUrl!}
+            alt=""
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              ...maskStyle,
+            }}
+          />
+        )}
+
+        {/* Template — multiply blend: light areas reveal user image, dark areas show template detail */}
+        <img
+          src={templateSrc}
+          alt=""
           style={{
-            fontSize: "clamp(7px, 0.9vw, 10px)",
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            objectPosition: "bottom center",
+            mixBlendMode: "multiply",
+          }}
+        />
+
+        {/* 띠지 (band) — media category, only when user image is present */}
+        {categoryKey === "media" && hasImage && (
+          <img
+            src="/bookmark.png"
+            alt=""
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              width: "100%",
+              top: "37%",
+              zIndex: 2,
+            }}
+          />
+        )}
+      </div>
+
+      {/* Title overlay */}
+      <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none px-0.5">
+        <span
+          style={{
+            color: "white",
+            fontWeight: 800,
+            fontSize: "clamp(6px, 0.75vw, 9px)",
+            textAlign: "center",
+            lineHeight: 1.2,
+            textShadow: "0 1px 3px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8)",
             display: "-webkit-box",
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
-            maxWidth: "100%",
+            maxWidth: "95%",
             wordBreak: "break-word",
           }}
         >
@@ -218,8 +189,8 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
   const totalPages = Math.max(1, Math.ceil(notes.length / NOTES_PER_PAGE));
   const pageNotes = notes.slice(currentPage * NOTES_PER_PAGE, (currentPage + 1) * NOTES_PER_PAGE);
 
-  function getSlotNote(slotIndex: number): StoredNote | null {
-    return pageNotes[slotIndex] ?? null;
+  function getSlotNote(i: number): StoredNote | null {
+    return pageNotes[i] ?? null;
   }
 
   function openModal() {
@@ -227,7 +198,8 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
     setIsModalOpen(true);
   }
   function closeModal() {
-    setIsModalOpen(false); setTitle(""); setArtist(""); setPhotoFile(null); setPhotoPreview(null); setMessage("");
+    setIsModalOpen(false);
+    setTitle(""); setArtist(""); setPhotoFile(null); setPhotoPreview(null); setMessage("");
   }
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -247,163 +219,135 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
     closeModal();
   }
 
-  // Arrow vertical center = top frame + row 0 height + shelf board + half of row 1
-  const arrowTop = SHELF_FRAME + SHELF_ROW_HEIGHT + SHELF_DIVIDER + SHELF_ROW_HEIGHT / 2;
-
   return (
-    <main className="page-shell">
-      <div className="mx-auto" style={{ maxWidth: "1200px" }}>
+    <main className="page-shell" style={{ padding: 0 }}>
 
-        {/* ── Header ── */}
-        <div className="flex items-start justify-between mb-4 px-14">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#697a4c]">
-              {category.label} 창고
-            </p>
-            <h1 className="mt-2 text-[1.9rem] font-black text-[#3f2a1d]">{category.mood}</h1>
-          </div>
-          <button
-            type="button"
-            onClick={openModal}
-            className="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-full bg-[#8a5a2f] text-2xl text-[#fff8eb] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#754a27]"
-            aria-label="새 감상 노트 만들기"
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between px-6 py-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#697a4c]">
+            {category.label} 창고
+          </p>
+          <h1 className="mt-1 text-[1.75rem] font-black text-[#3f2a1d]">{category.mood}</h1>
+        </div>
+        <button
+          type="button"
+          onClick={openModal}
+          className="flex-shrink-0 h-11 w-11 flex items-center justify-center rounded-full bg-[#8a5a2f] text-2xl text-[#fff8eb] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#754a27]"
+          aria-label="새 감상 노트 만들기"
+        >
+          +
+        </button>
+      </div>
+
+      {/* ── Bookshelf ── */}
+      {isLoading ? (
+        <div className="flex items-center justify-center h-56 text-[#6b4b35] font-semibold">
+          노트를 불러오는 중이에요...
+        </div>
+      ) : (
+        <div className="relative w-full" style={{ aspectRatio: "2752 / 1536" }}>
+          {/* Bookshelf background image */}
+          <img
+            src="/bookshelf.png"
+            alt="책장"
+            draggable={false}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+          />
+
+          {/* Note grid overlay — sits over the 3×3 cell area */}
+          <div
+            style={{
+              position: "absolute",
+              left: SHELF.left,
+              top: SHELF.top,
+              right: SHELF.right,
+              bottom: SHELF.bottom,
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateRows: "repeat(3, 1fr)",
+              columnGap: SHELF.columnGap,
+              rowGap: SHELF.rowGap,
+            }}
           >
-            +
+            {[0, 1, 2].map((row) =>
+              [0, 1, 2].map((col) => (
+                <div
+                  key={`${row}-${col}`}
+                  style={{ display: "flex", gap: "3%" }}
+                >
+                  <NoteSlot
+                    note={getSlotNote(row * 6 + col * 2)}
+                    categoryKey={categoryKey}
+                    onSelect={setSelectedNote}
+                  />
+                  <NoteSlot
+                    note={getSlotNote(row * 6 + col * 2 + 1)}
+                    categoryKey={categoryKey}
+                    onSelect={setSelectedNote}
+                  />
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Navigation arrows — flanking row 1, inside the outer wooden frame */}
+          <button
+            aria-label="이전 책장"
+            disabled={currentPage === 0}
+            onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+            style={{
+              position: "absolute",
+              left: SHELF.arrowInset,
+              top: SHELF.row1CenterTop,
+              transform: "translateY(-50%)",
+              width: SHELF.arrowSize,
+              aspectRatio: "1 / 1",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "50%",
+              background: "rgba(80,40,10,0.72)",
+              color: "#f5e8c0",
+              fontSize: "clamp(12px, 1.8vw, 22px)",
+              lineHeight: 1,
+              border: "none",
+              cursor: currentPage === 0 ? "default" : "pointer",
+              opacity: currentPage === 0 ? 0.25 : 1,
+              transition: "background 0.15s",
+            }}
+          >
+            ‹
+          </button>
+          <button
+            aria-label="다음 책장"
+            disabled={currentPage >= totalPages - 1}
+            onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+            style={{
+              position: "absolute",
+              right: SHELF.arrowInset,
+              top: SHELF.row1CenterTop,
+              transform: "translateY(-50%)",
+              width: SHELF.arrowSize,
+              aspectRatio: "1 / 1",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "50%",
+              background: "rgba(80,40,10,0.72)",
+              color: "#f5e8c0",
+              fontSize: "clamp(12px, 1.8vw, 22px)",
+              lineHeight: 1,
+              border: "none",
+              cursor: currentPage >= totalPages - 1 ? "default" : "pointer",
+              opacity: currentPage >= totalPages - 1 ? 0.25 : 1,
+              transition: "background 0.15s",
+            }}
+          >
+            ›
           </button>
         </div>
-
-        {/* ── Bookshelf ── */}
-        {isLoading ? (
-          <div className="flex items-center justify-center h-56 text-[#6b4b35] font-semibold">
-            노트를 불러오는 중이에요...
-          </div>
-        ) : (
-          /* px-14 → leaves 56px on each side for nav arrows */
-          <div className="relative px-14">
-
-            {/* Outer wood frame */}
-            <div
-              className="relative rounded-[6px] overflow-hidden"
-              style={{
-                background: "linear-gradient(170deg, #8a5528 0%, #7a4820 55%, #6a3c1a 100%)",
-                padding: `${SHELF_FRAME}px ${SHELF_FRAME}px 0`,
-                boxShadow: "0 14px 52px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,210,130,0.28), inset 0 -2px 6px rgba(0,0,0,0.25)",
-              }}
-            >
-              {/* Inner back wall */}
-              <div
-                className="rounded-t-sm overflow-hidden"
-                style={{
-                  background: "linear-gradient(165deg, #f6e9c2 0%, #eed9a0 55%, #e5cc8e 100%)",
-                }}
-              >
-                {/* 3 rows */}
-                {[0, 1, 2].map((rowIdx) => (
-                  <div key={rowIdx}>
-                    {/* Row — 3 cells, each cell has 2 slots */}
-                    <div
-                      className="flex"
-                      style={{
-                        height: `${SHELF_ROW_HEIGHT}px`,
-                        background: "radial-gradient(ellipse at 50% 100%, rgba(255,200,90,0.16), transparent 68%)",
-                      }}
-                    >
-                      {[0, 1, 2].map((cellIdx) => (
-                        <div key={cellIdx} className="flex flex-1 min-w-0">
-                          {/* Left slot */}
-                          <div className="flex-1 min-w-0" style={{ padding: "5px 3px 0 4px" }}>
-                            <NoteSlot
-                              note={getSlotNote(rowIdx * 6 + cellIdx * 2)}
-                              categoryKey={categoryKey}
-                              onSelect={setSelectedNote}
-                            />
-                          </div>
-                          {/* Right slot */}
-                          <div className="flex-1 min-w-0" style={{ padding: "5px 4px 0 3px" }}>
-                            <NoteSlot
-                              note={getSlotNote(rowIdx * 6 + cellIdx * 2 + 1)}
-                              categoryKey={categoryKey}
-                              onSelect={setSelectedNote}
-                            />
-                          </div>
-                          {/* Vertical divider (after cells 0 and 1) */}
-                          {cellIdx < 2 && (
-                            <div
-                              style={{
-                                width: `${SHELF_DIVIDER}px`,
-                                flexShrink: 0,
-                                background: "linear-gradient(90deg, #6a3c1a 0%, #7a4820 50%, #6a3c1a 100%)",
-                                boxShadow: "inset 1px 0 2px rgba(255,210,130,0.12), inset -1px 0 2px rgba(0,0,0,0.18)",
-                              }}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    {/* Horizontal shelf board (between rows) */}
-                    {rowIdx < 2 && (
-                      <div
-                        style={{
-                          height: `${SHELF_DIVIDER}px`,
-                          background: "linear-gradient(180deg, #7a4820 0%, #8a5528 45%, #6a3c1a 100%)",
-                          boxShadow: "0 3px 8px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,210,130,0.18)",
-                        }}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-              {/* Bottom shelf board */}
-              <div
-                style={{
-                  height: "18px",
-                  background: "linear-gradient(180deg, #7a4820 0%, #9a6030 45%, #7a4820 100%)",
-                  boxShadow: "0 5px 14px rgba(0,0,0,0.32)",
-                  borderRadius: "0 0 4px 4px",
-                }}
-              />
-            </div>
-
-            {/* Navigation arrows (vertically centered on row 1) */}
-            <button
-              className="absolute flex items-center justify-center rounded-full bg-[#6a3c1a]/80 text-[#f5e8c0] hover:bg-[#6a3c1a] transition"
-              style={{
-                left: "8px",
-                top: `${arrowTop}px`,
-                transform: "translateY(-50%)",
-                width: "36px",
-                height: "36px",
-                fontSize: "24px",
-                lineHeight: 1,
-                opacity: currentPage === 0 ? 0.25 : 1,
-              }}
-              onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-              disabled={currentPage === 0}
-              aria-label="이전 책장"
-            >
-              ‹
-            </button>
-            <button
-              className="absolute flex items-center justify-center rounded-full bg-[#6a3c1a]/80 text-[#f5e8c0] hover:bg-[#6a3c1a] transition"
-              style={{
-                right: "8px",
-                top: `${arrowTop}px`,
-                transform: "translateY(-50%)",
-                width: "36px",
-                height: "36px",
-                fontSize: "24px",
-                lineHeight: 1,
-                opacity: currentPage >= totalPages - 1 ? 0.25 : 1,
-              }}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={currentPage >= totalPages - 1}
-              aria-label="다음 책장"
-            >
-              ›
-            </button>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* ── Note Detail Popup ── */}
       {selectedNote && (

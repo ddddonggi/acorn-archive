@@ -1,26 +1,8 @@
 import { NextResponse } from "next/server";
 import { sql, ensureDatabase, normalizeDate } from "@/lib/server/db";
-import { generateGeminiText, extractJsonObject } from "@/lib/ai/gemini";
-import {
-  buildRecSystemPrompt,
-  buildRecentRecUserPrompt,
-  type RecOutput,
-  type RecSummaryInput,
-} from "@/lib/ai/recommendationPrompt";
+import { regenerateRecentRec } from "@/lib/server/recentRecs";
+import { regenerateFullRec } from "@/lib/server/recommendations";
 import type { NoteCategory } from "@/lib/notes";
-
-const CATEGORIES: NoteCategory[] = ["music", "media", "video"];
-
-async function fetchSummariesWithCategory(username: string) {
-  const result = await sql`
-    SELECT s.summary_title, s.artist, s.one_line_review, s.taste_hint, s.emotion_tags, n.category
-    FROM acorn_summaries s
-    JOIN acorn_notes n ON s.note_id = n.id
-    WHERE s.user_id = ${username}
-    ORDER BY s.updated_at DESC
-  `;
-  return result.rows;
-}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -33,65 +15,60 @@ export async function GET(request: Request) {
 
   await ensureDatabase();
 
-  if (type === "full") {
-    const result = await sql`
-      SELECT category, rec_title, rec_artist, rec_reason, updated_at
-      FROM acorn_full_recs
-      WHERE user_id = ${username}
-    `;
-    return NextResponse.json({
-      recommendations: result.rows.map((r) => ({
-        category: r.category as NoteCategory,
-        title: r.rec_title,
-        artist: r.rec_artist ?? "",
-        reason: r.rec_reason,
-        updatedAt: normalizeDate(r.updated_at),
-      })),
-    });
+  // Find categories that have at least one summary
+  const summaryResult = await sql`
+    SELECT DISTINCT n.category
+    FROM acorn_summaries s
+    JOIN acorn_notes n ON s.note_id = n.id
+    WHERE s.user_id = ${username}
+  `;
+  const categoriesWithData = summaryResult.rows.map((r) => r.category as NoteCategory);
+
+  if (type === "recent") {
+    return handleRecs(
+      username,
+      categoriesWithData,
+      () => sql`SELECT category, rec_title, rec_artist, rec_reason, updated_at FROM acorn_recent_recs WHERE user_id = ${username}`,
+      regenerateRecentRec,
+    );
   }
 
-  // type === "recent": generate on-demand from last 5 per category
-  const allRows = await fetchSummariesWithCategory(username);
-
-  const results = await Promise.allSettled(
-    CATEGORIES.map(async (cat) => {
-      const catRows = allRows.filter((r) => r.category === cat).slice(0, 5);
-      if (catRows.length === 0) return null;
-
-      const summaries: RecSummaryInput[] = catRows.map((r) => ({
-        summaryTitle: r.summary_title,
-        artist: r.artist ?? "",
-        oneLineReview: r.one_line_review,
-        tasteHint: r.taste_hint,
-        emotionTags: Array.isArray(r.emotion_tags) ? r.emotion_tags : [],
-      }));
-
-      const text = await generateGeminiText({
-        systemInstruction: buildRecSystemPrompt(cat),
-        prompt: buildRecentRecUserPrompt(cat, summaries),
-        temperature: 0.7,
-        maxOutputTokens: 300,
-      });
-
-      const parsed = JSON.parse(extractJsonObject(text)) as Partial<RecOutput>;
-      if (!parsed.title) return null;
-
-      return {
-        category: cat,
-        title: parsed.title,
-        artist: parsed.artist ?? "",
-        reason: parsed.reason ?? "",
-      };
-    }),
+  return handleRecs(
+    username,
+    categoriesWithData,
+    () => sql`SELECT category, rec_title, rec_artist, rec_reason, updated_at FROM acorn_full_recs WHERE user_id = ${username}`,
+    regenerateFullRec,
   );
+}
 
-  type Rec = { category: NoteCategory; title: string; artist: string; reason: string };
-  const recommendations: Rec[] = [];
-  for (const r of results) {
-    if (r.status === "fulfilled" && r.value !== null) {
-      recommendations.push(r.value);
+async function handleRecs(
+  username: string,
+  categoriesWithData: NoteCategory[],
+  fetchCache: () => ReturnType<typeof sql>,
+  regenerate: (username: string, category: NoteCategory) => Promise<void>,
+) {
+  const cacheResult = await fetchCache();
+  const cachedCategories = new Set(cacheResult.rows.map((r) => r.category as string));
+
+  const toGenerate = categoriesWithData.filter((cat) => !cachedCategories.has(cat));
+
+  for (const cat of toGenerate) {
+    try {
+      await regenerate(username, cat);
+    } catch {
+      // ignore individual failures
     }
   }
 
-  return NextResponse.json({ recommendations });
+  const finalResult = toGenerate.length > 0 ? await fetchCache() : cacheResult;
+
+  return NextResponse.json({
+    recommendations: finalResult.rows.map((r) => ({
+      category: r.category as NoteCategory,
+      title: r.rec_title,
+      artist: r.rec_artist ?? "",
+      reason: r.rec_reason,
+      updatedAt: normalizeDate(r.updated_at),
+    })),
+  });
 }

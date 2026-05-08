@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { isLoggedIn } from "@/lib/auth";
+import { useState, useEffect } from "react";
+import { isLoggedIn, getCurrentUser } from "@/lib/auth";
 
 type TailDir = "down" | "down-left" | "down-right" | "up" | "up-left" | "up-right";
 
@@ -199,6 +199,19 @@ export default function HomeContent() {
   const router = useRouter();
   const [heights, setHeights] = useState(DEFAULT_HEIGHTS);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [overallSummary, setOverallSummary] = useState<string | null>(undefined as unknown as null);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!user) {
+      setOverallSummary(null);
+      return;
+    }
+    fetch(`/api/overall-summary?username=${encodeURIComponent(user.username)}`)
+      .then((r) => r.json())
+      .then((data: { summaryText: string | null }) => setOverallSummary(data.summaryText ?? null))
+      .catch(() => setOverallSummary(null));
+  }, []);
 
   function go(href: string) {
     router.push(isLoggedIn() ? href : "/login");
@@ -241,16 +254,15 @@ export default function HomeContent() {
 
         {/* 오늘의 창고 메모 말풍선 */}
         <Bubble
-          style={{ top: "5%", left: "64%", width: "32.5%" }}
+          style={{ bottom: "60%", left: "64%", width: "32.5%" }}
           tailDir="down-left"
-          minHeight={30}
-          onClick={() => go("/taste")}
+          onClick={() => {}}
         >
           <p className="flex items-center gap-1 text-[0.75vw] font-semibold text-[#697a4c]">
             <span>★</span> 오늘의 창고 메모
           </p>
           <p className="mt-0.5 text-[0.8vw] leading-snug text-[#3f2a1d]" style={{ minHeight: "4.5em" }}>
-            잔잔한 여운이 남는 이야기, 오늘은 '리틀 포레스트'를 만나볼까요?
+            {overallSummary ?? "아직 AI 요약이 없어요. 감상문을 작성하면 생성됩니다."}
           </p>
         </Bubble>
 
@@ -281,7 +293,7 @@ export default function HomeContent() {
               <span>★</span> 오늘의 창고 메모
             </p>
             <p className="text-sm leading-relaxed text-[#3f2a1d]">
-              잔잔한 여운이 남는 이야기, 오늘은 '리틀 포레스트'를 만나볼까요?
+              {overallSummary ?? "아직 AI 요약이 없어요. 감상문을 작성하면 생성됩니다."}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">

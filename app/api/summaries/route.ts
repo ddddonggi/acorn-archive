@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import type { GeneratedSummary, StoredSummary } from "@/lib/summary";
 import { sql, ensureDatabase, normalizeDate } from "@/lib/server/db";
 import { regenerateFullRec } from "@/lib/server/recommendations";
+import { regenerateRecentRec } from "@/lib/server/recentRecs";
 import { regenerateCategoryTaste } from "@/lib/server/categoryTastes";
+import { analyzeTraditionalCulture } from "@/lib/server/traditionalCulture";
+import { regenerateOverallSummary } from "@/lib/server/overallSummary";
 import type { NoteCategory } from "@/lib/notes";
 
 export async function GET(request: Request) {
@@ -99,8 +102,14 @@ export async function POST(request: Request) {
     if (noteCategory) {
       // Category taste: await so client sees fresh text on next fetch
       await regenerateCategoryTaste(username, noteCategory).catch(() => {});
+      // Recent recs: fire-and-forget
+      void regenerateRecentRec(username, noteCategory).catch(() => {});
       // Full recs: fire-and-forget (uses all summaries, heavier)
       void regenerateFullRec(username, noteCategory).catch(() => {});
+      // Traditional culture: fire-and-forget
+      void analyzeTraditionalCulture(noteId, summary.summaryTitle).catch(() => {});
+      // Overall summary: fire-and-forget
+      void regenerateOverallSummary(username).catch(() => {});
     }
 
     return NextResponse.json({ summary: mapSummaryRow(result.rows[0]) });

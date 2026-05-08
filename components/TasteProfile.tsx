@@ -252,18 +252,19 @@ export default function TasteProfile() {
   return (
     <main className="page-shell flex flex-col">
       <section className="mx-auto w-full max-w-6xl flex-1 flex flex-col py-6">
-        <div className="warm-panel relative flex flex-1 flex-col rounded-[28px] p-7 md:p-10">
+        <div className="warm-panel relative flex flex-1 flex-col rounded-[28px] p-4 md:p-5">
           <p className="text-2xl font-bold text-[#5b351f]">
             내 종합 취향 리포트
           </p>
 
-          {/* 카테고리별 감상 수 + 총 개수 뱃지 */}
-          <div className="mt-5 grid gap-5 lg:grid-cols-2">
-            <div className="space-y-4 self-center">
+          {/* 카테고리별 감상 수 + 총 개수 뱃지 — 40:20:40 */}
+          <div className="mt-3 grid items-center gap-4 lg:grid-cols-[2fr_1fr_2fr] lg:gap-0">
+            <div className="space-y-4">
               {profile.categoryStats.map((cs) => (
                 <CategoryBar key={cs.category} stats={cs} max={maxCategoryCount} />
               ))}
             </div>
+            <div />
             <div className="flex flex-col items-start justify-center rounded-[22px] bg-[#5b351f] px-8 py-6 text-[#fff8eb]">
               <p className="text-xs font-bold text-[#ead7b8]">작성한 감상문</p>
               <p className="mt-2 text-5xl font-black">{profile.summaries.length}</p>
@@ -272,13 +273,15 @@ export default function TasteProfile() {
           </div>
 
           {/* 나의 문화 감상 성향 */}
-          <section className="mt-5">
-            <p className="mb-3 text-base font-bold text-[#5b351f]">나의 문화 감상 성향</p>
-            <p className="text-lg leading-8 text-[#3f2a1d]">{profile.oneLineSummary}</p>
+          <section className="mt-4">
+            <p className="mb-2 text-base font-bold text-[#5b351f]">나의 문화 감상 성향</p>
+            <div className="rounded-[18px] bg-[#fff8eb] px-6 py-4">
+              <p className="text-lg leading-8 text-[#3f2a1d]">{profile.oneLineSummary}</p>
+            </div>
           </section>
 
           {/* 카테고리별 취향 */}
-          <section className="mt-5">
+          <section className="mt-4">
             <p className="mb-4 text-base font-bold text-[#5b351f]">카테고리별 취향</p>
             <div className="grid gap-4 sm:grid-cols-3">
               {profile.categoryStats.map((cs) => (
