@@ -10,7 +10,7 @@ const navItems = [
   { href: "/music", label: "음악", protected: true },
   { href: "/media", label: "미디어", protected: true },
   { href: "/video", label: "영상", protected: true },
-  { href: "/taste", label: "추천", protected: true },
+  { href: "/taste", label: "내 취향/추천", protected: true },
 ];
 
 export default function AppHeader() {
