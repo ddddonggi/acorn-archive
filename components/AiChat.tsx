@@ -12,8 +12,13 @@ type AiChatProps = {
   noteId: string;
 };
 
-const welcomeMessage =
-  "오늘 감상에서 제일 오래 남은 장면, 소리, 문장 하나를 먼저 꺼내볼까요?";
+const categoryLabels = {
+  music: "음악",
+  media: "미디어",
+  video: "영상",
+} as const;
+
+const firstQuestion = "이 작품을 보고 가장 먼저 든 생각은 뭐였나요?";
 
 export default function AiChat({ noteId }: AiChatProps) {
   const router = useRouter();
@@ -50,7 +55,7 @@ export default function AiChat({ noteId }: AiChatProps) {
         noteId,
         userId: "system",
         role: "assistant" as const,
-        content: welcomeMessage,
+        content: firstQuestion,
         createdAt: new Date(0).toISOString(),
       },
     ];
@@ -78,11 +83,23 @@ export default function AiChat({ noteId }: AiChatProps) {
     <main className="page-shell">
       <section className="mx-auto grid max-w-6xl gap-6 py-8 lg:grid-cols-[1fr_320px]">
         <div className="warm-panel flex min-h-[680px] flex-col rounded-[24px] p-5 md:p-7">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">AI 대화</p>
-          <h1 className="mt-3 text-3xl font-black text-[#3f2a1d]">
-            {note?.title ?? "감상 노트"}
-          </h1>
-          <p className="mt-2 text-sm font-semibold text-[#8a5a2f]">
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">
+            AI 대화
+          </p>
+          <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-3xl font-black text-[#3f2a1d]">
+                {note?.title ?? "감상 노트"}
+              </h1>
+              <p className="mt-2 text-sm font-semibold text-[#8a5a2f]">
+                카테고리: {note ? categoryLabels[note.category] : "불러오는 중"}
+              </p>
+            </div>
+            <span className="w-fit rounded-full bg-[#fff8eb] px-4 py-2 text-sm font-bold text-[#5b351f]">
+              noteId: {noteId}
+            </span>
+          </div>
+          <p className="mt-4 text-sm font-semibold text-[#8a5a2f]">
             AI는 답을 대신 쓰기보다, 내 생각을 조금 더 잘 들여다보게 도와줘요.
           </p>
 
@@ -115,7 +132,7 @@ export default function AiChat({ noteId }: AiChatProps) {
           <form className="mt-5 flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
             <input
               className="min-w-0 flex-1 rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 outline-none"
-              placeholder="감상을 적어보세요"
+              placeholder="답변을 입력해 주세요"
               value={input}
               onChange={(event) => setInput(event.target.value)}
             />
