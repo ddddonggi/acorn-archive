@@ -2,6 +2,8 @@ import { neon } from "@neondatabase/serverless";
 
 export const sql = neon(process.env.STORAGE_POSTGRES_URL!, { fullResults: true });
 
+export type SqlRows = { rows: Record<string, any>[] };
+
 export async function ensureDatabase() {
   await sql`
     CREATE TABLE IF NOT EXISTS acorn_users (
@@ -27,7 +29,19 @@ export async function ensureDatabase() {
   `;
 
   await sql`
+    ALTER TABLE acorn_notes ADD COLUMN IF NOT EXISTS artist TEXT NOT NULL DEFAULT ''
+  `;
+
+  await sql`
+    ALTER TABLE acorn_notes ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT ''
+  `;
+
+  await sql`
     ALTER TABLE acorn_notes ADD COLUMN IF NOT EXISTS traditional_culture_memo TEXT NOT NULL DEFAULT ''
+  `;
+
+  await sql`
+    ALTER TABLE acorn_notes ADD COLUMN IF NOT EXISTS traditional_culture_score INT NOT NULL DEFAULT 0
   `;
 
   await sql`

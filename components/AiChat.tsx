@@ -162,13 +162,19 @@ export default function AiChat({ noteId }: AiChatProps) {
     await requestAssistantMessage(nextMessages);
   }
 
+  const shelfBg: React.CSSProperties = {
+    backgroundImage: "url('/bookshelf.png')",
+    backgroundSize: "120% 120%",
+    backgroundPosition: "50% 75%",
+  };
+
   if (savedSummary === undefined) {
-    return <main className="page-shell" />;
+    return <main className="page-shell" style={shelfBg} />;
   }
 
   if (savedSummary) {
     return (
-      <main className="page-shell">
+      <main className="page-shell" style={shelfBg}>
         <section className="mx-auto grid max-w-6xl gap-6 py-8 lg:grid-cols-[1fr_320px]">
           <div className="warm-panel rounded-[24px] p-7 md:p-10">
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">
@@ -242,7 +248,7 @@ export default function AiChat({ noteId }: AiChatProps) {
   }
 
   return (
-    <main className="flex-1 min-h-0 flex flex-col overflow-y-auto lg:overflow-hidden px-6 py-6">
+    <main className="flex-1 min-h-0 flex flex-col overflow-y-auto lg:overflow-hidden px-6 py-6" style={shelfBg}>
       {debugInfo ? (
         <DebugErrorModal
           title="AI 응답 생성 중 오류가 발생했어요"

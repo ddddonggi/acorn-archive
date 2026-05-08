@@ -1,9 +1,14 @@
 import { sql } from "@/lib/server/db";
-import { generateGeminiText } from "@/lib/ai/gemini";
+import { generateGeminiText, extractJsonObject } from "@/lib/ai/gemini";
 import {
   buildTraditionalCultureSystemPrompt,
   buildTraditionalCultureUserPrompt,
 } from "@/lib/ai/traditionalCulturePrompt";
+
+type TraditionalCultureResult = {
+  score: number;
+  memo: string;
+};
 
 export async function analyzeTraditionalCulture(
   noteId: string,
@@ -27,15 +32,23 @@ export async function analyzeTraditionalCulture(
     systemInstruction: buildTraditionalCultureSystemPrompt(),
     prompt: buildTraditionalCultureUserPrompt(noteTitle, messages),
     temperature: 0.3,
-    maxOutputTokens: 300,
+    maxOutputTokens: 400,
   });
 
-  const memo = text.trim();
-  if (!memo) return;
+  let parsed: Partial<TraditionalCultureResult>;
+  try {
+    parsed = JSON.parse(extractJsonObject(text)) as Partial<TraditionalCultureResult>;
+  } catch {
+    return;
+  }
+
+  const score = typeof parsed.score === "number" ? Math.min(100, Math.max(0, Math.round(parsed.score))) : 0;
+  const memo = score >= 40 ? (parsed.memo?.trim() ?? "") : "";
 
   await sql`
     UPDATE acorn_notes
-    SET traditional_culture_memo = ${memo}
+    SET traditional_culture_score = ${score},
+        traditional_culture_memo  = ${memo}
     WHERE id = ${noteId}
   `;
 }

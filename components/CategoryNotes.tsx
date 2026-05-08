@@ -13,19 +13,18 @@ const TEMPLATE: Record<NoteCategory, string> = {
   video: "/image_poster.png",
 };
 
-// Shelf overlay geometry — percentages of the bookshelf.png image (2752×1536)
-// Adjust if the grid doesn't line up with the shelf cells
+// Shelf overlay geometry — recalculated for 1.2× scale, 15% top / 5% bottom crop
+// Formula: container_% = image_% × 1.2 + offset  (x_offset=-10%, y_offset=-15%)
 const SHELF = {
-  left: "13%",
-  top: "14%",
-  right: "13%",
-  bottom: "18%",
+  left: "14%",
+  top: "29%",
+  right: "16%",
+  bottom: "6%",
   columnGap: "1.4%",
   rowGap: "1.4%",
-  // Vertical center of shelf row 1 (as % of full image height) — for nav arrows
-  row1CenterTop: "48%",
-  arrowInset: "6.5%",  // left/right inset of nav arrows from image edge
-  arrowSize: "3.2%",   // arrow button width (aspect-ratio 1:1)
+  row1CenterTop: "43%",
+  arrowInset: "1.5%",
+  arrowSize: "3.2%",
 } as const;
 
 type CategoryCopy = {
@@ -59,15 +58,15 @@ function NoteSlot({
   // CSS mask aligns with object-fit: contain + object-position: bottom center
   const maskStyle: React.CSSProperties = hasImage
     ? {
-        maskImage: `url(${templateSrc})`,
-        maskSize: "contain",
-        maskPosition: "bottom center",
-        maskRepeat: "no-repeat",
-        WebkitMaskImage: `url(${templateSrc})`,
-        WebkitMaskSize: "contain",
-        WebkitMaskPosition: "bottom center",
-        WebkitMaskRepeat: "no-repeat",
-      }
+      maskImage: `url(${templateSrc})`,
+      maskSize: "contain",
+      maskPosition: "bottom center",
+      maskRepeat: "no-repeat",
+      WebkitMaskImage: `url(${templateSrc})`,
+      WebkitMaskSize: "contain",
+      WebkitMaskPosition: "bottom center",
+      WebkitMaskRepeat: "no-repeat",
+    }
     : {};
 
   return (
@@ -130,12 +129,12 @@ function NoteSlot({
       </div>
 
       {/* Title overlay */}
-      <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none px-0.5">
+      <div className="absolute top-8 left-0 right-0 flex justify-center pointer-events-none px-0.5">
         <span
           style={{
             color: "white",
             fontWeight: 800,
-            fontSize: "clamp(6px, 0.75vw, 9px)",
+            fontSize: "clamp(17px, 1.7vw, 18px)",
             textAlign: "center",
             lineHeight: 1.2,
             textShadow: "0 1px 3px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8)",
@@ -220,40 +219,44 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
   }
 
   return (
-    <main className="page-shell" style={{ padding: 0 }}>
+    <main className="page-shell" style={{ padding: "0px" }}>
 
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between px-6 py-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#697a4c]">
-            {category.label} 창고
-          </p>
-          <h1 className="mt-1 text-[1.75rem] font-black text-[#3f2a1d]">{category.mood}</h1>
-        </div>
-        <button
-          type="button"
-          onClick={openModal}
-          className="flex-shrink-0 h-11 w-11 flex items-center justify-center rounded-full bg-[#8a5a2f] text-2xl text-[#fff8eb] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#754a27]"
-          aria-label="새 감상 노트 만들기"
-        >
-          +
-        </button>
-      </div>
-
-      {/* ── Bookshelf ── */}
+      {/* ── Bookshelf (full-page background) ── */}
       {isLoading ? (
         <div className="flex items-center justify-center h-56 text-[#6b4b35] font-semibold">
           노트를 불러오는 중이에요...
         </div>
       ) : (
-        <div className="relative w-full" style={{ aspectRatio: "2752 / 1536" }}>
-          {/* Bookshelf background image */}
-          <img
-            src="/bookshelf.png"
-            alt="책장"
-            draggable={false}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-          />
+        <div
+          className="relative w-full overflow-hidden"
+          style={{
+            aspectRatio: "2752 / 1536",
+            maxHeight: "calc(100vh - 73px)",
+            backgroundImage: "url('/bookshelf.png')",
+            backgroundSize: "140% 140%",
+            backgroundPosition: "50% 75%",
+          }}
+        >
+          {/* Header overlaid on background */}
+          <div
+            className="flex items-start justify-between"
+            style={{ position: "absolute", top: "3%", left: "2%", right: "2%", zIndex: 10 }}
+          >
+            <div>
+              <p className="text-[1.7rem] font-bold uppercase tracking-[0.15em] text-[#3f2a1d]">
+                {category.label} 창고
+              </p>
+              <h1 className="mt-0 text-[2.7rem] font-black text-[#3f2a1d]">{category.mood}</h1>
+            </div>
+            <button
+              type="button"
+              onClick={openModal}
+              className="flex-shrink-0 h-11 w-11 flex items-center justify-center rounded-full bg-[#8a5a2f] text-2xl text-[#fff8eb] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#754a27]"
+              aria-label="새 감상 노트 만들기"
+            >
+              +
+            </button>
+          </div>
 
           {/* Note grid overlay — sits over the 3×3 cell area */}
           <div

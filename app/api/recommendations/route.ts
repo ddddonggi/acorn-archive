@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sql, ensureDatabase, normalizeDate } from "@/lib/server/db";
+import { sql, ensureDatabase, normalizeDate, type SqlRows } from "@/lib/server/db";
 import { regenerateRecentRec } from "@/lib/server/recentRecs";
 import { regenerateFullRec } from "@/lib/server/recommendations";
 import type { NoteCategory } from "@/lib/notes";
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 async function handleRecs(
   username: string,
   categoriesWithData: NoteCategory[],
-  fetchCache: () => ReturnType<typeof sql>,
+  fetchCache: () => Promise<SqlRows>,
   regenerate: (username: string, category: NoteCategory) => Promise<void>,
 ) {
   const cacheResult = await fetchCache();

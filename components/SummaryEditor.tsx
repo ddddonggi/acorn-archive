@@ -184,9 +184,15 @@ export default function SummaryEditor() {
     router.push(`/${note.category}`);
   }
 
+  const shelfBg: React.CSSProperties = {
+    backgroundImage: "url('/bookshelf.png')",
+    backgroundSize: "120% 120%",
+    backgroundPosition: "50% 75%",
+  };
+
   if (!noteId) {
     return (
-      <main className="page-shell flex items-center justify-center">
+      <main className="page-shell flex items-center justify-center" style={shelfBg}>
         <section className="warm-panel max-w-md rounded-[24px] p-7 text-center">
           <h1 className="text-3xl font-black text-[#3f2a1d]">정리할 노트가 없어요</h1>
           <p className="mt-3 text-[#6b4b35]">
@@ -204,7 +210,7 @@ export default function SummaryEditor() {
   }
 
   return (
-    <main className="page-shell">
+    <main className="page-shell" style={shelfBg}>
       {debugInfo ? (
         <DebugErrorModal
           title="감상문 정리 중 오류가 발생했어요"

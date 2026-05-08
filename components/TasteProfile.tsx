@@ -26,8 +26,8 @@ const categoryLabels: Record<NoteCategory, string> = {
 
 const categoryColors: Record<NoteCategory, string> = {
   music: "#697a4c",
-  media: "#8a5a2f",
-  video: "#b5705a",
+  media: "#697a4c",
+  video: "#697a4c",
 };
 
 const emptyProfile: TasteProfileData = {
@@ -252,14 +252,14 @@ export default function TasteProfile() {
   return (
     <main className="page-shell flex flex-col">
       <section className="mx-auto w-full max-w-6xl flex-1 flex flex-col py-6">
-        <div className="warm-panel relative flex flex-1 flex-col rounded-[28px] p-4 md:p-5">
+        <div className="warm-panel relative flex flex-1 flex-col rounded-[28px] p-7 md:p-9">
           <p className="text-2xl font-bold text-[#5b351f]">
             내 종합 취향 리포트
           </p>
 
           {/* 카테고리별 감상 수 + 총 개수 뱃지 — 40:20:40 */}
-          <div className="mt-3 grid items-center gap-4 lg:grid-cols-[2fr_1fr_2fr] lg:gap-0">
-            <div className="space-y-4">
+          <div className="mt-3 grid items-center gap-4 lg:grid-cols-[3fr_1fr_3fr] lg:gap-0">
+            <div className="space-y-8">
               {profile.categoryStats.map((cs) => (
                 <CategoryBar key={cs.category} stats={cs} max={maxCategoryCount} />
               ))}
@@ -273,15 +273,15 @@ export default function TasteProfile() {
           </div>
 
           {/* 나의 문화 감상 성향 */}
-          <section className="mt-4">
+          <section className="mt-8">
             <p className="mb-2 text-base font-bold text-[#5b351f]">나의 문화 감상 성향</p>
-            <div className="rounded-[18px] bg-[#fff8eb] px-6 py-4">
+            <div className="rounded-[18px] bg-[#F5E8D3] px-6 py-4">
               <p className="text-lg leading-8 text-[#3f2a1d]">{profile.oneLineSummary}</p>
             </div>
           </section>
 
           {/* 카테고리별 취향 */}
-          <section className="mt-4">
+          <section className="mt-8">
             <p className="mb-4 text-base font-bold text-[#5b351f]">카테고리별 취향</p>
             <div className="grid gap-4 sm:grid-cols-3">
               {profile.categoryStats.map((cs) => (
