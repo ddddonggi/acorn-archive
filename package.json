@@ -9,7 +9,7 @@
     "lint": "node ./node_modules/next/dist/bin/next lint"
   },
   "dependencies": {
-    "@vercel/postgres": "^0.10.0",
+    "@neondatabase/serverless": "^0.9.3",
     "bcryptjs": "^3.0.3",
     "next": "latest",
     "react": "latest",

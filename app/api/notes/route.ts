@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
-import { ensureDatabase, normalizeDate } from "@/lib/server/db";
+import { sql, ensureDatabase, normalizeDate } from "@/lib/server/db";
 import type { NoteCategory, StoredNote } from "@/lib/notes";
 
 export async function GET(request: Request) {

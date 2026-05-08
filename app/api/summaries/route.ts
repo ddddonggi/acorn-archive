@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
 import type { GeneratedSummary, StoredSummary } from "@/lib/summary";
-import { ensureDatabase, normalizeDate } from "@/lib/server/db";
+import { sql, ensureDatabase, normalizeDate } from "@/lib/server/db";
 
 export async function GET(request: Request) {
   try {

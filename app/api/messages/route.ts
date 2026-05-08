@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
 import type { ChatMessage, ChatRole } from "@/lib/chat";
-import { ensureDatabase, normalizeDate } from "@/lib/server/db";
+import { sql, ensureDatabase, normalizeDate } from "@/lib/server/db";
 
 export async function GET(request: Request) {
   try {
