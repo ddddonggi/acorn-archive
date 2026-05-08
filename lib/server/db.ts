@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 
-export const sql = neon(process.env.POSTGRES_URL!, { fullResults: true });
+export const sql = neon(process.env.STORAGE_POSTGRES_URL!, { fullResults: true });
 
 export async function ensureDatabase() {
   await sql`
