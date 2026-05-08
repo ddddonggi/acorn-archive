@@ -140,7 +140,7 @@ export default function AiChat({ noteId }: AiChatProps) {
             감상문 정리하기
           </Link>
           <Link
-            href={note ? `/categories/${note.category}` : "/"}
+            href={note ? `/${note.category}` : "/"}
             className="mt-3 block rounded-2xl border border-[#8a5a2f]/25 px-5 py-3 text-center font-bold text-[#5b351f]"
           >
             목록으로 돌아가기

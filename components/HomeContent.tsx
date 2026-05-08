@@ -6,19 +6,19 @@ import { isLoggedIn } from "@/lib/auth";
 
 const categories = [
   {
-    href: "/categories/music",
+    href: "/music",
     title: "음악",
     description: "LP판처럼 오래 맴도는 감상을 남겨요.",
     visual: "LP",
   },
   {
-    href: "/categories/media",
+    href: "/media",
     title: "미디어",
     description: "책장 한 칸에 생각의 조각을 꽂아둬요.",
     visual: "BOOK",
   },
   {
-    href: "/categories/video",
+    href: "/video",
     title: "영상",
     description: "작은 TV 앞에서 떠오른 마음을 기록해요.",
     visual: "TV",
@@ -28,9 +28,13 @@ const categories = [
 export default function HomeContent() {
   const router = useRouter();
 
-  function handleCategoryClick(event: React.MouseEvent<HTMLAnchorElement>, href: string) {
-    event.preventDefault();
+  function moveByAuth(href: string) {
     router.push(isLoggedIn() ? href : "/login");
+  }
+
+  function handleProtectedClick(event: React.MouseEvent<HTMLAnchorElement>, href: string) {
+    event.preventDefault();
+    moveByAuth(href);
   }
 
   return (
@@ -57,6 +61,7 @@ export default function HomeContent() {
               </p>
               <Link
                 href="/taste"
+                onClick={(event) => handleProtectedClick(event, "/taste")}
                 className="mt-6 inline-flex rounded-full bg-[#fff8eb] px-5 py-3 text-sm font-bold text-[#5b351f]"
               >
                 내 종합 취향 보기
@@ -70,7 +75,7 @@ export default function HomeContent() {
             <Link
               key={category.href}
               href={category.href}
-              onClick={(event) => handleCategoryClick(event, category.href)}
+              onClick={(event) => handleProtectedClick(event, category.href)}
               className="warm-panel group rounded-[24px] p-6 transition hover:-translate-y-1 hover:shadow-2xl"
             >
               <div className="mb-8 flex h-40 items-center justify-center rounded-[20px] bg-[#ead7b8]">

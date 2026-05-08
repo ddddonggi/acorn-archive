@@ -7,9 +7,9 @@ import { getCurrentUser, logout } from "@/lib/auth";
 
 const navItems = [
   { href: "/", label: "홈", protected: false },
-  { href: "/categories/music", label: "음악", protected: true },
-  { href: "/categories/media", label: "미디어", protected: true },
-  { href: "/categories/video", label: "영상", protected: true },
+  { href: "/music", label: "음악", protected: true },
+  { href: "/media", label: "미디어", protected: true },
+  { href: "/video", label: "영상", protected: true },
   { href: "/taste", label: "내 취향", protected: true },
 ];
 
