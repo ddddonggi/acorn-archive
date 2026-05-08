@@ -18,11 +18,12 @@ export default function SummaryEditor() {
   const searchParams = useSearchParams();
   const noteId = searchParams.get("noteId");
   const [note, setNote] = useState<StoredNote | null>(null);
-  const [title, setTitle] = useState("");
-  const [oneLine, setOneLine] = useState("");
-  const [body, setBody] = useState("");
+  const [summaryTitle, setSummaryTitle] = useState("");
+  const [oneLineReview, setOneLineReview] = useState("");
+  const [essay, setEssay] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
-  const [emotions, setEmotions] = useState<string[]>([]);
+  const [emotionTags, setEmotionTags] = useState<string[]>([]);
+  const [tasteHint, setTasteHint] = useState("");
   const [savedSummary, setSavedSummary] = useState<StoredSummary | null>(null);
   const [message, setMessage] = useState("");
 
@@ -41,19 +42,24 @@ export default function SummaryEditor() {
     const draft =
       existingSummary ??
       nextNote?.summary ??
-      generateSummaryFromMessages(nextNote, getMessagesByNoteId(noteId));
+      generateSummaryFromMessages({
+        noteTitle: nextNote?.title ?? "이 작품",
+        category: nextNote?.category ?? "media",
+        messages: getMessagesByNoteId(noteId),
+      });
 
     setNote(nextNote);
-    setTitle(draft.title);
-    setOneLine(draft.oneLine);
-    setBody(draft.body);
+    setSummaryTitle(draft.summaryTitle);
+    setOneLineReview(draft.oneLineReview);
+    setEssay(draft.essay);
     setKeywords(draft.keywords.slice(0, 3));
-    setEmotions(draft.emotions.slice(0, 3));
+    setEmotionTags(draft.emotionTags.slice(0, 3));
+    setTasteHint(draft.tasteHint);
     setSavedSummary(existingSummary);
   }, [noteId, router]);
 
   const keywordText = useMemo(() => keywords.join(", "), [keywords]);
-  const emotionText = useMemo(() => emotions.join(", "), [emotions]);
+  const emotionText = useMemo(() => emotionTags.join(", "), [emotionTags]);
 
   function handleTagChange(value: string, setter: (nextTags: string[]) => void) {
     setter(
@@ -71,22 +77,23 @@ export default function SummaryEditor() {
       return;
     }
 
-    if (!title.trim() || !oneLine.trim() || !body.trim()) {
+    if (!summaryTitle.trim() || !oneLineReview.trim() || !essay.trim()) {
       setMessage("제목, 한 줄 감상, 감상문 본문을 모두 입력해 주세요.");
       return;
     }
 
-    if (keywords.length !== 3 || emotions.length !== 3) {
+    if (keywords.length !== 3 || emotionTags.length !== 3) {
       setMessage("핵심 키워드와 감정 태그를 각각 3개씩 입력해 주세요.");
       return;
     }
 
     const summary = saveSummary(noteId, {
-      title: title.trim(),
-      oneLine: oneLine.trim(),
-      body: body.trim(),
+      summaryTitle: summaryTitle.trim(),
+      oneLineReview: oneLineReview.trim(),
+      essay: essay.trim(),
+      emotionTags,
       keywords,
-      emotions,
+      tasteHint: tasteHint.trim(),
     });
 
     if (!summary) {
@@ -124,7 +131,7 @@ export default function SummaryEditor() {
           </h1>
           <p className="mt-4 text-[#6b4b35]">
             {note
-              ? `"${note.title}"에 대해 나눈 대화를 바탕으로 mock 감상문을 만들었어요.`
+              ? `"${note.title}"에 대해 나눈 대화를 바탕으로 감상문을 만들었어요.`
               : "저장된 노트를 확인하고 있어요."}
           </p>
 
@@ -134,8 +141,8 @@ export default function SummaryEditor() {
           <input
             id="summary-title"
             className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 text-xl font-bold text-[#3f2a1d] outline-none"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            value={summaryTitle}
+            onChange={(event) => setSummaryTitle(event.target.value)}
           />
 
           <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-one-line">
@@ -144,18 +151,18 @@ export default function SummaryEditor() {
           <input
             id="summary-one-line"
             className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium text-[#5b351f] outline-none"
-            value={oneLine}
-            onChange={(event) => setOneLine(event.target.value)}
+            value={oneLineReview}
+            onChange={(event) => setOneLineReview(event.target.value)}
           />
 
-          <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-body">
+          <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-essay">
             3. 감상문 본문
           </label>
           <textarea
-            id="summary-body"
+            id="summary-essay"
             className="mt-2 min-h-80 w-full resize-y rounded-[22px] border border-[#8a5a2f]/20 bg-[#fff8eb] px-5 py-4 leading-8 text-[#5b351f] outline-none"
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
+            value={essay}
+            onChange={(event) => setEssay(event.target.value)}
           />
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -174,10 +181,20 @@ export default function SummaryEditor() {
                 id="summary-emotions"
                 className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium outline-none"
                 value={emotionText}
-                onChange={(event) => handleTagChange(event.target.value, setEmotions)}
+                onChange={(event) => handleTagChange(event.target.value, setEmotionTags)}
               />
             </label>
           </div>
+
+          <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-taste">
+            tasteHint
+          </label>
+          <input
+            id="summary-taste"
+            className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium text-[#5b351f] outline-none"
+            value={tasteHint}
+            onChange={(event) => setTasteHint(event.target.value)}
+          />
 
           {message ? <p className="mt-5 text-sm font-bold text-[#8a5a2f]">{message}</p> : null}
 
@@ -212,7 +229,7 @@ export default function SummaryEditor() {
           <section className="warm-panel rounded-[24px] p-6">
             <h2 className="text-xl font-black text-[#3f2a1d]">감정 태그</h2>
             <div className="mt-4 flex flex-wrap gap-2">
-              {emotions.map((emotion) => (
+              {emotionTags.map((emotion) => (
                 <span key={emotion} className="rounded-full bg-[#697a4c] px-3 py-2 text-sm font-bold text-[#fff8eb]">
                   {emotion}
                 </span>

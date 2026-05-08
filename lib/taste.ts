@@ -112,7 +112,7 @@ export function generateTasteProfile(): TasteProfile {
   const summaries = getSummaries().filter(
     (summary) => summary.userId === currentUser.username,
   );
-  const emotionTags = countItems(summaries.flatMap((summary) => summary.emotions));
+  const emotionTags = countItems(summaries.flatMap((summary) => summary.emotionTags));
   const keywords = countItems(summaries.flatMap((summary) => summary.keywords));
   const oneLineSummary = createOneLineSummary(summaries, emotionTags, keywords);
   const recommendations = createRecommendations(emotionTags);
@@ -158,6 +158,14 @@ function createOneLineSummary(
 ) {
   if (summaries.length === 0) {
     return "";
+  }
+
+  const latestTasteHint = summaries
+    .slice()
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]?.tasteHint;
+
+  if (latestTasteHint) {
+    return latestTasteHint;
   }
 
   const topEmotion = emotions[0]?.label ?? "사색";

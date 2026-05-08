@@ -1,13 +1,9 @@
 import { getCurrentUser } from "@/lib/auth";
+import type { GeneratedSummary } from "@/lib/summary";
 
 export type NoteCategory = "music" | "media" | "video";
 
-export type NoteSummary = {
-  title: string;
-  oneLine: string;
-  body: string;
-  keywords: string[];
-  emotions: string[];
+export type NoteSummary = GeneratedSummary & {
   savedAt: string;
 };
 
@@ -97,7 +93,7 @@ export function createNote(category: NoteCategory, title: string) {
   return note;
 }
 
-export function updateNoteSummary(noteId: string, summary: Omit<NoteSummary, "savedAt">) {
+export function updateNoteSummary(noteId: string, summary: GeneratedSummary) {
   if (!isBrowser()) {
     return null;
   }

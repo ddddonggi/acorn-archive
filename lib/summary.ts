@@ -1,13 +1,20 @@
 import { getCurrentUser } from "@/lib/auth";
 import { ChatMessage } from "@/lib/chat";
-import { StoredNote, updateNoteSummary } from "@/lib/notes";
+import { NoteCategory, updateNoteSummary } from "@/lib/notes";
 
 export type GeneratedSummary = {
-  title: string;
-  oneLine: string;
-  body: string;
+  summaryTitle: string;
+  oneLineReview: string;
+  essay: string;
+  emotionTags: string[];
   keywords: string[];
-  emotions: string[];
+  tasteHint: string;
+};
+
+export type SummaryInput = {
+  noteTitle: string;
+  category: NoteCategory;
+  messages: ChatMessage[];
 };
 
 export type StoredSummary = GeneratedSummary & {
@@ -18,17 +25,24 @@ export type StoredSummary = GeneratedSummary & {
   updatedAt: string;
 };
 
+type LegacySummary = Partial<StoredSummary> & {
+  title?: string;
+  oneLine?: string;
+  body?: string;
+  emotions?: string[];
+};
+
 const SUMMARY_KEY = "acorn_summaries";
 
 const emotionRules = [
-  { tag: "따뜻함", words: ["따뜻", "좋", "편안", "위로", "포근"] },
-  { tag: "먹먹함", words: ["슬", "먹먹", "외로", "그리", "눈물"] },
-  { tag: "설렘", words: ["설레", "기대", "반짝", "두근"] },
-  { tag: "낯섦", words: ["낯", "이상", "불편", "묘", "혼란"] },
-  { tag: "사색", words: ["생각", "질문", "왜", "의미", "기억"] },
+  { tag: "따뜻함", words: ["따뜻", "좋", "편안", "위로", "포근", "고마"] },
+  { tag: "먹먹함", words: ["슬", "먹먹", "외로", "그리", "눈물", "아프"] },
+  { tag: "설렘", words: ["설레", "기대", "반짝", "두근", "기분"] },
+  { tag: "낯섦", words: ["낯", "이상", "불편", "묘", "혼란", "어색"] },
+  { tag: "사색", words: ["생각", "질문", "왜", "의미", "기억", "나와"] },
 ];
 
-const fallbackKeywords = ["감상", "기억", "장면"];
+const fallbackKeywords = ["감상", "기억", "여운"];
 const fallbackEmotions = ["사색", "여운", "호기심"];
 
 function isBrowser() {
@@ -47,7 +61,7 @@ export function getSummaries(): StoredSummary[] {
   }
 
   try {
-    return JSON.parse(rawSummaries) as StoredSummary[];
+    return (JSON.parse(rawSummaries) as LegacySummary[]).map(normalizeSummary);
   } catch {
     return [];
   }
@@ -67,49 +81,56 @@ export function getSummaryByNoteId(noteId: string) {
   );
 }
 
-export function generateSummaryFromMessages(
-  note: StoredNote | null,
-  messages: ChatMessage[],
-): GeneratedSummary {
+export function generateSummaryFromMessages({
+  noteTitle,
+  category,
+  messages,
+}: SummaryInput): GeneratedSummary {
   const userMessages = messages.filter((message) => message.role === "user");
-  const joinedText = userMessages.map((message) => message.content).join(" ");
+  const userTexts = userMessages.map((message) => cleanText(message.content)).filter(Boolean);
+  const joinedText = userTexts.join(" ");
   const keywords = extractKeywords(joinedText);
-  const emotions = extractEmotions(joinedText);
-  const noteTitle = note?.title ?? "이 작품";
-  const title = `${noteTitle} 감상문`;
+  const emotionTags = extractEmotions(joinedText);
+  const mainEmotion = emotionTags[0];
+  const firstThought = userTexts[0];
+  const rememberedPart = userTexts[1] ?? userTexts[0];
+  const meaningPart = userTexts[2] ?? userTexts[userTexts.length - 1];
+  const categoryLabel = getCategoryLabel(category);
 
-  if (userMessages.length === 0) {
+  if (userTexts.length === 0) {
     return {
-      title,
-      oneLine: "아직 대화가 충분히 쌓이지 않아 첫 감상을 기다리고 있어요.",
-      body:
-        "AI와 작품에 대해 조금 더 이야기하면 이곳에 감상문이 정리됩니다. 가장 먼저 든 생각, 기억에 남은 장면, 지금의 나와 연결되는 부분을 천천히 적어보세요.",
+      summaryTitle: `${noteTitle} 감상 기록`,
+      oneLineReview: "아직 충분한 대화가 없어 첫 감상을 기다리고 있다.",
+      essay:
+        `${categoryLabel} "${noteTitle}"에 대한 대화가 아직 충분히 쌓이지 않았다.\n\n` +
+        "그래서 지금은 작품에 대해 없는 내용을 덧붙이지 않고, 감상을 시작하기 전의 짧은 기록으로 남긴다.\n\n" +
+        "다음 대화에서 가장 먼저 든 생각과 기억에 남은 부분이 더해지면 감상문을 자연스럽게 정리할 수 있다.",
+      emotionTags,
       keywords,
-      emotions,
+      tasteHint: "아직 취향을 판단하기에는 감상 데이터가 부족합니다.",
     };
   }
 
-  const firstThought = userMessages[0]?.content.trim();
-  const middleThoughts = userMessages
-    .slice(1, 4)
-    .map((message) => message.content.trim())
-    .filter(Boolean)
-    .join(" ");
-  const oneLine = `${noteTitle}은 나에게 ${keywords[0]}과 ${emotions[0]}의 여운으로 남았다.`;
-  const body = [
-    `"${noteTitle}"을 감상한 뒤 가장 먼저 남은 생각은 "${firstThought}"였다.`,
-    middleThoughts
-      ? `대화를 이어가며 ${middleThoughts} 같은 감정과 장면을 다시 바라보게 되었다.`
-      : "아직 많은 말을 나누지는 않았지만, 첫 감상 안에 작품을 향한 중요한 단서가 담겨 있었다.",
-    `이 감상은 단순히 작품을 설명하는 기록이라기보다, 내가 ${keywords[0]}에 반응하고 ${emotions[0]}의 분위기를 오래 붙잡는 사람이라는 것을 보여준다.`,
-  ].join("\n\n");
+  const essay = limitLength(
+    [
+      `${categoryLabel} "${noteTitle}"을 감상한 뒤 가장 크게 남은 감정은 ${mainEmotion}이었다. 사용자는 "${firstThought}"라고 말하며 작품이 남긴 첫 인상을 꺼냈다.`,
+      rememberedPart
+        ? `그 감정이 생긴 이유는 "${rememberedPart}"라는 말 속에 드러난다. 작품의 줄거리보다 사용자가 붙잡은 분위기와 생각이 더 중요하게 남아 있다.`
+        : "아직 구체적인 이유가 길게 말해지지는 않았지만, 첫 감정 자체가 이 감상의 중심이 된다.",
+      meaningPart
+        ? `결국 이 작품은 사용자에게 "${meaningPart}"라는 생각을 남겼다. 이 감상은 작품을 설명하기보다, 사용자가 무엇에 반응하고 어떤 의미를 오래 바라보는지 보여주는 기록이다.`
+        : "결국 이 작품은 사용자에게 짧지만 분명한 여운을 남겼다. 아직 많은 말은 없지만, 감정 중심의 감상 기록으로 충분히 의미가 있다.",
+    ].join("\n\n"),
+    500,
+  );
 
   return {
-    title,
-    oneLine,
-    body,
+    summaryTitle: `${noteTitle} 감상문`,
+    oneLineReview: `${noteTitle}은 나에게 ${mainEmotion}과 ${keywords[0]}의 여운으로 남았다.`,
+    essay,
+    emotionTags,
     keywords,
-    emotions,
+    tasteHint: `사용자는 ${mainEmotion}의 감정과 "${keywords[0]}" 같은 단서에 오래 반응하는 편입니다.`,
   };
 }
 
@@ -156,6 +177,26 @@ export function saveSummary(noteId: string, draft: GeneratedSummary) {
   return nextSummary;
 }
 
+function normalizeSummary(summary: LegacySummary): StoredSummary {
+  return {
+    id: summary.id ?? `summary-${summary.noteId ?? "unknown"}`,
+    noteId: summary.noteId ?? "",
+    userId: summary.userId ?? "",
+    summaryTitle: summary.summaryTitle ?? summary.title ?? "감상문",
+    oneLineReview: summary.oneLineReview ?? summary.oneLine ?? "짧은 감상 기록",
+    essay: summary.essay ?? summary.body ?? "",
+    emotionTags: fillToThree(summary.emotionTags ?? summary.emotions ?? [], fallbackEmotions),
+    keywords: fillToThree(summary.keywords ?? [], fallbackKeywords),
+    tasteHint: summary.tasteHint ?? "감정과 키워드를 중심으로 감상하는 편입니다.",
+    createdAt: summary.createdAt ?? new Date().toISOString(),
+    updatedAt: summary.updatedAt ?? new Date().toISOString(),
+  };
+}
+
+function cleanText(text: string) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 function extractKeywords(text: string) {
   const words = text
     .replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, " ")
@@ -177,16 +218,16 @@ function extractKeywords(text: string) {
 }
 
 function extractEmotions(text: string) {
-  const emotions = emotionRules
+  const emotionTags = emotionRules
     .filter((rule) => rule.words.some((word) => text.includes(word)))
     .map((rule) => rule.tag)
     .slice(0, 3);
 
-  return fillToThree(emotions, fallbackEmotions);
+  return fillToThree(emotionTags, fallbackEmotions);
 }
 
 function fillToThree(values: string[], fallbacks: string[]) {
-  const result = [...values];
+  const result = [...values.map((value) => value.trim()).filter(Boolean)];
 
   fallbacks.forEach((fallback) => {
     if (result.length < 3 && !result.includes(fallback)) {
@@ -195,4 +236,22 @@ function fillToThree(values: string[], fallbacks: string[]) {
   });
 
   return result.slice(0, 3);
+}
+
+function limitLength(text: string, maxLength: number) {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength - 1).trim()}…`;
+}
+
+function getCategoryLabel(category: NoteCategory) {
+  const labels: Record<NoteCategory, string> = {
+    music: "음악",
+    media: "미디어",
+    video: "영상",
+  };
+
+  return labels[category];
 }
