@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import { generateGeminiText } from "@/lib/ai/gemini";
 import {
   buildChatDeveloperPrompt,
   buildChatSystemPrompt,
-  DEFAULT_OPENAI_MODEL,
+  buildChatUserPrompt,
   getInitialQuestion,
 } from "@/lib/ai/prompts";
 import { ChatRequestBody } from "@/lib/ai/types";
@@ -25,37 +25,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: getInitialQuestion(note.category) });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json({ message: FALLBACK_MESSAGE }, { status: 500 });
-    }
-
-    const client = new OpenAI({ apiKey });
-    const model = process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
     const recentMessages = messages
       .filter((message) => isValidMessage(message))
       .slice(-MAX_CONTEXT_MESSAGES);
-
-    const completion = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: buildChatSystemPrompt(note.category) },
-        { role: "developer", content: buildChatDeveloperPrompt(note.title, note.category) },
-        ...recentMessages.map((message) => ({
-          role: message.role,
-          content: message.content,
-        })),
-      ],
+    const message = await generateGeminiText({
+      systemInstruction: [
+        buildChatSystemPrompt(note.category),
+        buildChatDeveloperPrompt(note.title, note.category),
+      ].join("\n\n"),
+      prompt: buildChatUserPrompt(note, recentMessages),
       temperature: 0.8,
-      max_tokens: 180,
+      maxOutputTokens: 180,
     });
-
-    const message = completion.choices[0]?.message?.content?.trim();
-
-    if (!message) {
-      return NextResponse.json({ message: FALLBACK_MESSAGE }, { status: 500 });
-    }
 
     return NextResponse.json({ message });
   } catch {

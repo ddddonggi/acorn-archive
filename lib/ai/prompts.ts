@@ -1,12 +1,10 @@
-import { AiNoteCategory } from "@/lib/ai/types";
-
-export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+import { AiChatMessage, AiChatNote, AiNoteCategory } from "@/lib/ai/types";
 
 const categoryGuides: Record<AiNoteCategory, string> = {
   music:
     "음악 감상에서는 가사, 멜로디, 음색, 리듬, 분위기, 듣고 싶은 상황을 중심으로 질문한다.",
   media:
-    "미디어 감상에서는 책, 웹툰, 만화, 콘텐츠의 캐릭터, 관계성, 세계관, 문체/그림체, 서사를 중심으로 질문한다.",
+    "미디어 감상에서는 책, 웹툰, 만화, 콘텐츠의 캐릭터, 관계성, 세계관, 문체나 그림체, 서사를 중심으로 질문한다.",
   video:
     "영상 감상에서는 영화나 영상의 장면, 인물, 연출, 메시지, OST, 색감을 중심으로 질문한다.",
 };
@@ -62,4 +60,18 @@ export function buildChatDeveloperPrompt(noteTitle: string, category: AiNoteCate
 이 대화의 목표는 사용자가 작품에 대해 스스로 더 말할 수 있게 돕는 것이다.
 최근 대화 맥락을 보고 아직 충분히 다루지 않은 단계의 질문을 하나만 이어서 한다.
 사용자가 짧게 답했다면 예시 선택지를 포함해 쉽게 답하게 한다.`;
+}
+
+export function buildChatUserPrompt(note: AiChatNote, messages: AiChatMessage[]) {
+  const conversation = messages
+    .map((message) => `${message.role === "user" ? "사용자" : "AI"}: ${message.content}`)
+    .join("\n");
+
+  return `작품 제목: ${note.title}
+카테고리: ${note.category}
+
+최근 대화:
+${conversation || "아직 대화가 없습니다."}
+
+위 대화를 이어서 AI의 다음 답변만 작성해줘.`;
 }

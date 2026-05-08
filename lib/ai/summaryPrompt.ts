@@ -1,15 +1,15 @@
-import { AiNoteCategory } from "@/lib/ai/types";
+import { AiChatMessage, AiChatNote, AiNoteCategory, SummaryResponseBody } from "@/lib/ai/types";
 
 const categoryGuides: Record<AiNoteCategory, string> = {
   music:
     "music: 가사, 멜로디, 음색, 분위기, 듣고 싶은 상황, 감정을 중심으로 정리한다.",
   media:
-    "media: 책/웹툰/만화/콘텐츠 기준으로 캐릭터, 관계성, 세계관, 문체/그림체, 서사를 중심으로 정리한다.",
+    "media: 책, 웹툰, 만화, 콘텐츠의 캐릭터, 관계성, 세계관, 문체나 그림체, 서사를 중심으로 정리한다.",
   video:
-    "video: 영화/영상 기준으로 장면, 인물, 연출, 메시지, OST, 색감을 중심으로 정리한다.",
+    "video: 영화나 영상의 장면, 인물, 연출, 메시지, OST, 색감을 중심으로 정리한다.",
 };
 
-export const SUMMARY_FALLBACK = {
+export const SUMMARY_FALLBACK: SummaryResponseBody = {
   summaryTitle: "아직 정리하지 못한 감상",
   oneLineReview: "조금 더 이야기를 나누면 감상이 더 선명해질 것 같아요.",
   essay:
@@ -32,7 +32,7 @@ export function buildSummarySystemPrompt(category: AiNoteCategory) {
 6. 초등학생 독서록처럼 너무 단순하지 않게 작성한다.
 7. 본문은 500자 이내로 작성한다.
 8. 한국어로 작성한다.
-9. 결과는 반드시 JSON 형식으로 반환한다.
+9. 결과는 반드시 JSON 형식으로만 반환한다.
 
 감상문 본문 구성:
 - 1문단: 작품을 보고 가장 크게 느낀 감정
@@ -60,4 +60,18 @@ export function buildSummaryDeveloperPrompt(noteTitle: string, category: AiNoteC
 대화에서 사용자가 직접 말한 내용만 근거로 삼아라.
 대화가 부족하면 없는 내용을 만들지 말고 짧은 감상 기록 형태로 작성하라.
 emotionTags와 keywords는 반드시 각각 3개씩 작성하라.`;
+}
+
+export function buildSummaryUserPrompt(note: AiChatNote, messages: AiChatMessage[]) {
+  const conversation = messages
+    .map((message) => `${message.role === "user" ? "사용자" : "AI"}: ${message.content}`)
+    .join("\n");
+
+  return `작품 제목: ${note.title}
+카테고리: ${note.category}
+
+감상 대화:
+${conversation || "아직 대화가 없습니다."}
+
+위 대화를 바탕으로 지정된 JSON 형식의 감상문만 반환해줘.`;
 }

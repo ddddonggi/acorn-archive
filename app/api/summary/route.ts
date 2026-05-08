@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-import { DEFAULT_OPENAI_MODEL } from "@/lib/ai/prompts";
+import { extractJsonObject, generateGeminiText } from "@/lib/ai/gemini";
 import {
   buildSummaryDeveloperPrompt,
   buildSummarySystemPrompt,
+  buildSummaryUserPrompt,
   SUMMARY_FALLBACK,
 } from "@/lib/ai/summaryPrompt";
 import { SummaryRequestBody, SummaryResponseBody } from "@/lib/ai/types";
@@ -20,40 +20,20 @@ export async function POST(request: Request) {
       return NextResponse.json(SUMMARY_FALLBACK, { status: 400 });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json(SUMMARY_FALLBACK, { status: 500 });
-    }
-
-    const client = new OpenAI({ apiKey });
-    const model = process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
     const recentMessages = messages
       .filter((message) => isValidMessage(message))
       .slice(-MAX_CONTEXT_MESSAGES);
-
-    const completion = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: buildSummarySystemPrompt(note.category) },
-        { role: "developer", content: buildSummaryDeveloperPrompt(note.title, note.category) },
-        ...recentMessages.map((message) => ({
-          role: message.role,
-          content: message.content,
-        })),
-      ],
-      temperature: 0.5,
-      max_tokens: 700,
-      response_format: { type: "json_object" },
+    const content = await generateGeminiText({
+      systemInstruction: [
+        buildSummarySystemPrompt(note.category),
+        buildSummaryDeveloperPrompt(note.title, note.category),
+      ].join("\n\n"),
+      prompt: buildSummaryUserPrompt(note, recentMessages),
+      temperature: 0.4,
+      maxOutputTokens: 900,
     });
 
-    const content = completion.choices[0]?.message?.content;
-
-    if (!content) {
-      return NextResponse.json(SUMMARY_FALLBACK, { status: 500 });
-    }
-
-    const summary = normalizeSummary(JSON.parse(content));
+    const summary = normalizeSummary(JSON.parse(extractJsonObject(content)));
 
     return NextResponse.json(summary);
   } catch {

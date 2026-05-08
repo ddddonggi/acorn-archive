@@ -8,7 +8,8 @@ AI와 친구처럼 대화하며 음악, 미디어, 영상 감상을 기록하고
 - React
 - TypeScript
 - Tailwind CSS
-- localStorage 기반 mock 데이터 저장
+- localStorage 기반 사용자/노트/대화 저장
+- Gemini API 기반 감상 대화와 감상문 정리
 
 ## 주요 페이지
 
@@ -22,20 +23,21 @@ AI와 친구처럼 대화하며 음악, 미디어, 영상 감상을 기록하고
 - `/summary?noteId=...` 감상문 정리
 - `/taste` 내 종합 취향
 
-## OpenAI API 키 설정
+## Gemini API 키 설정
 
-실제 API 키는 OpenAI Platform에서 직접 발급해야 합니다.
+실제 API 키는 Google AI Studio에서 직접 발급해 사용합니다.
 
-1. OpenAI Platform의 API keys 페이지에서 새 키를 발급합니다.
-2. 로컬 개발에서는 `.env.local` 파일에 아래처럼 넣습니다.
+1. 로컬 개발에서는 `.env.local` 파일에 아래처럼 넣습니다.
 
 ```bash
-OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
-3. Vercel 배포에서는 Project Settings > Environment Variables에 `OPENAI_API_KEY`를 추가합니다.
+2. Vercel 배포에서는 Project Settings > Environment Variables에 `GEMINI_API_KEY`를 추가합니다.
+3. 모델을 바꾸고 싶으면 선택 사항으로 `GEMINI_MODEL`을 추가합니다. 없으면 `gemini-2.5-flash`를 사용합니다.
 
-`.env.local`은 Git에 커밋되지 않도록 `.gitignore`에 포함되어 있습니다. 공유 저장소에는 실제 키를 올리지 마세요.
+`.env.local`은 Git에 커밋되지 않도록 `.gitignore`에 포함되어 있습니다. 공유 저장소에는 실제 API 키를 올리지 마세요.
 
 ## 로컬 실행
 
@@ -55,11 +57,11 @@ npm run start
 
 ## Vercel 배포
 
-Vercel에서 GitHub 저장소를 연결한 뒤 기본 설정 그대로 배포할 수 있습니다.
+Vercel에서 GitHub 저장소를 연결하면 기본 설정으로 배포할 수 있습니다.
 
 - Framework Preset: Next.js
 - Build Command: `npm run build`
 - Output Directory: Next.js 기본값 사용
 - Install Command: `npm install`
 
-현재 데이터는 브라우저 `localStorage`에 저장되므로, 사용자 브라우저별로 독립적으로 유지됩니다.
+현재 사용자 데이터는 브라우저 `localStorage`에 저장되므로 사용자 브라우저별로 독립적으로 유지됩니다.
