@@ -12,6 +12,8 @@ export type StoredNote = {
   userId: string;
   category: NoteCategory;
   title: string;
+  artist: string;
+  imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
   summary?: NoteSummary;
@@ -47,7 +49,7 @@ export async function getNoteById(noteId: string) {
   return data.note ?? null;
 }
 
-export async function createNote(category: NoteCategory, title: string) {
+export async function createNote(category: NoteCategory, title: string, artist: string = "") {
   const currentUser = getCurrentUser();
 
   if (!currentUser) {
@@ -61,6 +63,7 @@ export async function createNote(category: NoteCategory, title: string) {
       username: currentUser.username,
       category,
       title: title.trim(),
+      artist: artist.trim(),
     }),
   });
   const data = (await response.json()) as { note?: StoredNote | null };
@@ -68,4 +71,30 @@ export async function createNote(category: NoteCategory, title: string) {
   window.dispatchEvent(new Event("acorn-notes-changed"));
 
   return data.note ?? null;
+}
+
+export async function uploadNoteImage(noteId: string, file: File) {
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("noteId", noteId);
+  formData.append("username", currentUser.username);
+
+  const response = await fetch("/api/images", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = (await response.json()) as { url?: string; note?: StoredNote; error?: string };
+
+  if (!response.ok || !data.note) {
+    return null;
+  }
+
+  return data.note;
 }

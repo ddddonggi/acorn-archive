@@ -6,6 +6,13 @@ export type TasteCount = {
   count: number;
 };
 
+export type CategoryStats = {
+  category: NoteCategory;
+  count: number;
+  topEmotionTags: string[];
+  topKeywords: string[];
+};
+
 export type TasteRecommendation = {
   title: string;
   reason: string;
@@ -17,43 +24,50 @@ export type TasteProfile = {
   emotionTags: TasteCount[];
   keywords: TasteCount[];
   oneLineSummary: string;
+  categoryStats: CategoryStats[];
   recommendations: TasteRecommendation[];
 };
-
-const defaultRecommendations: TasteRecommendation[] = [
-  {
-    title: "감정을 천천히 기록할 수 있는 에세이",
-    reason: "아직 취향 데이터가 적을 때 부담 없이 시작하기 좋아요.",
-    category: "media",
-  },
-  {
-    title: "밤에 듣기 좋은 잔잔한 플레이리스트",
-    reason: "첫 감상 노트를 남기기 좋은 부드러운 분위기예요.",
-    category: "music",
-  },
-  {
-    title: "여운이 선명한 단편 영화",
-    reason: "짧지만 대화로 꺼낼 감정이 남는 콘텐츠예요.",
-    category: "video",
-  },
-];
 
 export async function generateTasteProfile(): Promise<TasteProfile> {
   const summaries = await getSummaries();
   const emotionTags = countItems(summaries.flatMap((summary) => summary.emotionTags));
   const keywords = countItems(summaries.flatMap((summary) => summary.keywords));
   const oneLineSummary = createOneLineSummary(summaries, emotionTags, keywords);
+  const categoryStats = buildCategoryStats(summaries);
 
   return {
     summaries,
     emotionTags,
     keywords,
     oneLineSummary,
-    recommendations: defaultRecommendations,
+    categoryStats,
+    recommendations: [],
   };
 }
 
-function countItems(items: string[]): TasteCount[] {
+function getCategoryFromNoteId(noteId: string): NoteCategory | null {
+  if (noteId.startsWith("music-")) return "music";
+  if (noteId.startsWith("media-")) return "media";
+  if (noteId.startsWith("video-")) return "video";
+  return null;
+}
+
+function buildCategoryStats(summaries: StoredSummary[]): CategoryStats[] {
+  const cats: NoteCategory[] = ["music", "media", "video"];
+  return cats.map((cat) => {
+    const catSummaries = summaries.filter((s) => getCategoryFromNoteId(s.noteId) === cat);
+    const tags = countItems(catSummaries.flatMap((s) => s.emotionTags));
+    const kws = countItems(catSummaries.flatMap((s) => s.keywords));
+    return {
+      category: cat,
+      count: catSummaries.length,
+      topEmotionTags: tags.slice(0, 5).map((t) => t.label),
+      topKeywords: kws.slice(0, 3).map((k) => k.label),
+    };
+  });
+}
+
+export function countItems(items: string[]): TasteCount[] {
   const counts = new Map<string, number>();
 
   items

@@ -18,7 +18,7 @@ export async function GET(
     await ensureDatabase();
 
     const result = await sql`
-      SELECT id, user_id, category, title, created_at, updated_at
+      SELECT id, user_id, category, title, artist, image_url, created_at, updated_at
       FROM acorn_notes
       WHERE id = ${noteId} AND user_id = ${username}
     `;
@@ -39,6 +39,8 @@ function mapNoteRow(row: any): StoredNote {
     userId: row.user_id,
     category: row.category,
     title: row.title,
+    artist: row.artist ?? "",
+    imageUrl: row.image_url ?? null,
     createdAt: normalizeDate(row.created_at),
     updatedAt: normalizeDate(row.updated_at),
   };

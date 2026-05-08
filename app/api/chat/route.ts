@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     const message = await generateGeminiText({
       systemInstruction: [
         buildChatSystemPrompt(note.category),
-        buildChatDeveloperPrompt(note.title, note.category),
+        buildChatDeveloperPrompt(note.title, note.category, recentMessages),
       ].join("\n\n"),
       prompt: buildChatUserPrompt(note, recentMessages),
       temperature: 0.8,

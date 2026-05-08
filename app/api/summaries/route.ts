@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { GeneratedSummary, StoredSummary } from "@/lib/summary";
 import { sql, ensureDatabase, normalizeDate } from "@/lib/server/db";
+import { regenerateFullRec } from "@/lib/server/recommendations";
+import type { NoteCategory } from "@/lib/notes";
 
 export async function GET(request: Request) {
   try {
@@ -85,11 +87,17 @@ export async function POST(request: Request) {
                 emotion_tags, keywords, taste_hint, created_at, updated_at
     `;
 
-    await sql`
+    const noteResult = await sql`
       UPDATE acorn_notes
       SET updated_at = ${now}
       WHERE id = ${noteId} AND user_id = ${username}
+      RETURNING category
     `;
+
+    const noteCategory = noteResult.rows[0]?.category as NoteCategory | undefined;
+    if (noteCategory) {
+      void regenerateFullRec(username, noteCategory).catch(() => {});
+    }
 
     return NextResponse.json({ summary: mapSummaryRow(result.rows[0]) });
   } catch (error) {

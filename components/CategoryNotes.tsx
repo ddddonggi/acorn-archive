@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useRef } from "react";
 import { getCurrentUser } from "@/lib/auth";
-import { createNote, getNotesByCategory, NoteCategory, StoredNote } from "@/lib/notes";
+import { createNote, getNotesByCategory, NoteCategory, StoredNote, uploadNoteImage } from "@/lib/notes";
 
 type CategoryCopy = {
   label: string;
@@ -23,8 +24,13 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
   const [notes, setNotes] = useState<StoredNote[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [artist, setArtist] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!getCurrentUser()) {
@@ -56,7 +62,18 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
   function closeModal() {
     setIsModalOpen(false);
     setTitle("");
+    setArtist("");
+    setPhotoFile(null);
+    setPhotoPreview(null);
     setMessage("");
+  }
+
+  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    const url = URL.createObjectURL(file);
+    setPhotoPreview(url);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -67,14 +84,21 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
       return;
     }
 
-    const note = await createNote(categoryKey, title);
+    setIsSubmitting(true);
+
+    const note = await createNote(categoryKey, title, artist);
 
     if (!note) {
       router.push("/login");
       return;
     }
 
+    if (photoFile) {
+      await uploadNoteImage(note.id, photoFile);
+    }
+
     setNotes(await getNotesByCategory(categoryKey));
+    setIsSubmitting(false);
     closeModal();
   }
 
@@ -109,13 +133,25 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
               <Link
                 key={note.id}
                 href={`/notes/${note.id}`}
-                className="warm-panel flex min-h-48 flex-col justify-between rounded-[18px] p-6 transition hover:-translate-y-1"
+                className="warm-panel flex min-h-48 flex-col justify-between overflow-hidden rounded-[18px] transition hover:-translate-y-1"
               >
-                <div>
+                {note.imageUrl ? (
+                  <div className="h-36 w-full overflow-hidden">
+                    <img
+                      src={note.imageUrl}
+                      alt={note.title}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : null}
+                <div className={note.imageUrl ? "p-6 pt-4" : "p-6"}>
                   <p className="text-sm font-bold text-[#697a4c]">{note.category}</p>
-                  <h2 className="mt-4 text-2xl font-black text-[#3f2a1d]">{note.title}</h2>
+                  <h2 className="mt-2 text-2xl font-black text-[#3f2a1d]">{note.title}</h2>
+                  {note.artist ? (
+                    <p className="mt-1 text-sm font-semibold text-[#8a5a2f]">{note.artist}</p>
+                  ) : null}
                 </div>
-                <div className="mt-8 border-t border-[#8a5a2f]/15 pt-4 text-sm font-semibold text-[#6b4b35]">
+                <div className="mx-6 mb-6 border-t border-[#8a5a2f]/15 pt-4 text-sm font-semibold text-[#6b4b35]">
                   <p>카테고리: {category.label}</p>
                   <p className="mt-1">생성 날짜: {formatDate(note.createdAt)}</p>
                 </div>
@@ -148,7 +184,7 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
                 닫기
               </button>
             </div>
-            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+            <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
               <input
                 autoFocus
                 className="w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 outline-none"
@@ -156,12 +192,57 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
               />
+              <input
+                className="w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 outline-none"
+                placeholder="아티스트 / 감독 (선택)"
+                value={artist}
+                onChange={(event) => setArtist(event.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-dashed border-[#8a5a2f]/30 bg-[#fff8eb] px-4 py-3 text-left transition hover:border-[#8a5a2f]/60"
+              >
+                {photoPreview ? (
+                  <>
+                    <img
+                      src={photoPreview}
+                      alt="미리보기"
+                      className="h-14 w-14 flex-shrink-0 rounded-xl object-cover"
+                    />
+                    <span className="text-sm font-semibold text-[#5b351f]">
+                      {photoFile?.name}
+                      <br />
+                      <span className="text-xs font-normal text-[#8a5a2f]">클릭해서 변경</span>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-[#f4e5c9] text-[#8a5a2f]">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <rect x="3" y="3" width="18" height="18" rx="3" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <path d="M21 15l-5-5L5 21" />
+                      </svg>
+                    </span>
+                    <span className="text-sm font-semibold text-[#8a5a2f]/60">사진 추가 (선택)</span>
+                  </>
+                )}
+              </button>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoChange}
+              />
               {message ? <p className="text-sm font-semibold text-[#8a5a2f]">{message}</p> : null}
               <button
                 type="submit"
-                className="block w-full rounded-2xl bg-[#8a5a2f] px-4 py-3 text-center font-bold text-[#fff8eb]"
+                disabled={isSubmitting}
+                className="block w-full rounded-2xl bg-[#8a5a2f] px-4 py-3 text-center font-bold text-[#fff8eb] disabled:opacity-60"
               >
-                확인
+                {isSubmitting ? "저장 중..." : "확인"}
               </button>
             </form>
           </section>

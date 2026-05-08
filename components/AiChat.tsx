@@ -7,7 +7,7 @@ import DebugErrorModal from "@/components/DebugErrorModal";
 import { ChatResponseBody } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/auth";
 import { appendMessages, ChatMessage, getMessagesByNoteId } from "@/lib/chat";
-import { getNoteById, StoredNote } from "@/lib/notes";
+import { getNoteById, StoredNote, uploadNoteImage } from "@/lib/notes";
 import { getSummaryByNoteId, StoredSummary } from "@/lib/summary";
 
 type AiChatProps = {
@@ -35,7 +35,9 @@ export default function AiChat({ noteId }: AiChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [debugInfo, setDebugInfo] = useState<unknown>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!getCurrentUser()) {
@@ -128,6 +130,19 @@ export default function AiChat({ noteId }: AiChatProps) {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !note) return;
+
+    setIsUploadingImage(true);
+    const updated = await uploadNoteImage(noteId, file);
+    if (updated) {
+      setNote(updated);
+    }
+    setIsUploadingImage(false);
+    event.target.value = "";
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -242,7 +257,7 @@ export default function AiChat({ noteId }: AiChatProps) {
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">
             AI 대화
           </p>
-          <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <h1 className="text-3xl font-black text-[#3f2a1d]">
                 {note?.title ?? "감상 노트"}
@@ -251,9 +266,53 @@ export default function AiChat({ noteId }: AiChatProps) {
                 카테고리: {note ? categoryLabels[note.category] : "불러오는 중"}
               </p>
             </div>
-            <span className="w-fit rounded-full bg-[#fff8eb] px-4 py-2 text-sm font-bold text-[#5b351f]">
-              noteId: {noteId}
-            </span>
+            <div className="flex flex-col items-end gap-2">
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={isUploadingImage}
+                className="group relative h-20 w-20 overflow-hidden rounded-2xl border-2 border-dashed border-[#8a5a2f]/30 bg-[#fff8eb] transition hover:border-[#8a5a2f]/60 disabled:opacity-60"
+                aria-label="사진 변경"
+              >
+                {note?.imageUrl ? (
+                  <>
+                    <img
+                      src={note.imageUrl}
+                      alt="커버 이미지"
+                      className="h-full w-full object-cover"
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center bg-[#3f2a1d]/50 opacity-0 transition group-hover:opacity-100">
+                      <span className="text-xs font-bold text-white">변경</span>
+                    </span>
+                  </>
+                ) : (
+                  <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-[#8a5a2f]/60">
+                    {isUploadingImage ? (
+                      <span className="text-xs font-semibold">업로드 중</span>
+                    ) : (
+                      <>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <rect x="3" y="3" width="18" height="18" rx="3" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="M21 15l-5-5L5 21" />
+                        </svg>
+                        <span className="text-[10px] font-bold">사진 추가</span>
+                      </>
+                    )}
+                  </span>
+                )}
+              </button>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+              <span className="w-fit rounded-full bg-[#fff8eb] px-3 py-1.5 text-xs font-bold text-[#5b351f]">
+                noteId: {noteId}
+              </span>
+            </div>
           </div>
           <p className="mt-4 text-sm font-semibold text-[#8a5a2f]">
             AI는 감상문을 대신 쓰지 않고, 네 생각을 더 잘 꺼낼 수 있게 질문해요.

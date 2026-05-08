@@ -53,6 +53,22 @@ export async function ensureDatabase() {
   await sql`
     ALTER TABLE acorn_summaries ADD COLUMN IF NOT EXISTS artist TEXT NOT NULL DEFAULT ''
   `;
+
+  await sql`
+    ALTER TABLE acorn_notes ADD COLUMN IF NOT EXISTS image_url TEXT
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS acorn_full_recs (
+      user_id TEXT NOT NULL REFERENCES acorn_users(username) ON DELETE CASCADE,
+      category TEXT NOT NULL CHECK (category IN ('music', 'media', 'video')),
+      rec_title TEXT NOT NULL DEFAULT '',
+      rec_artist TEXT NOT NULL DEFAULT '',
+      rec_reason TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, category)
+    )
+  `;
 }
 
 export function normalizeDate(value: Date | string) {
