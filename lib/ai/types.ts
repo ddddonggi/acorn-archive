@@ -19,3 +19,17 @@ export type ChatRequestBody = {
 export type ChatResponseBody = {
   message: string;
 };
+
+export type SummaryRequestBody = {
+  note: AiChatNote;
+  messages: AiChatMessage[];
+};
+
+export type SummaryResponseBody = {
+  summaryTitle: string;
+  oneLineReview: string;
+  essay: string;
+  emotionTags: string[];
+  keywords: string[];
+  tasteHint: string;
+};

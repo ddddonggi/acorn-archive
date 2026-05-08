@@ -5,13 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { getMessagesByNoteId } from "@/lib/chat";
+import { SummaryResponseBody } from "@/lib/ai/types";
 import { getNoteById, StoredNote } from "@/lib/notes";
-import {
-  generateSummaryFromMessages,
-  getSummaryByNoteId,
-  saveSummary,
-  StoredSummary,
-} from "@/lib/summary";
+import { getSummaryByNoteId, saveSummary, StoredSummary } from "@/lib/summary";
 
 export default function SummaryEditor() {
   const router = useRouter();
@@ -26,6 +22,7 @@ export default function SummaryEditor() {
   const [tasteHint, setTasteHint] = useState("");
   const [savedSummary, setSavedSummary] = useState<StoredSummary | null>(null);
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!getCurrentUser()) {
@@ -39,27 +36,68 @@ export default function SummaryEditor() {
 
     const nextNote = getNoteById(noteId);
     const existingSummary = getSummaryByNoteId(noteId);
-    const draft =
-      existingSummary ??
-      nextNote?.summary ??
-      generateSummaryFromMessages({
-        noteTitle: nextNote?.title ?? "이 작품",
-        category: nextNote?.category ?? "media",
-        messages: getMessagesByNoteId(noteId),
-      });
+    const noteSummary = nextNote?.summary;
 
     setNote(nextNote);
-    setSummaryTitle(draft.summaryTitle);
-    setOneLineReview(draft.oneLineReview);
-    setEssay(draft.essay);
-    setKeywords(draft.keywords.slice(0, 3));
-    setEmotionTags(draft.emotionTags.slice(0, 3));
-    setTasteHint(draft.tasteHint);
-    setSavedSummary(existingSummary);
+
+    const draft = existingSummary ?? noteSummary;
+
+    if (draft) {
+      setSummaryTitle(draft.summaryTitle);
+      setOneLineReview(draft.oneLineReview);
+      setEssay(draft.essay);
+      setKeywords(draft.keywords.slice(0, 3));
+      setEmotionTags(draft.emotionTags.slice(0, 3));
+      setTasteHint(draft.tasteHint);
+      setSavedSummary(existingSummary);
+      return;
+    }
+
+    if (nextNote) {
+      void requestSummary(nextNote, noteId);
+    }
   }, [noteId, router]);
 
   const keywordText = useMemo(() => keywords.join(", "), [keywords]);
   const emotionText = useMemo(() => emotionTags.join(", "), [emotionTags]);
+
+  async function requestSummary(targetNote: StoredNote, targetNoteId: string) {
+    setIsLoading(true);
+    setMessage("");
+
+    try {
+      const messages = getMessagesByNoteId(targetNoteId);
+      const response = await fetch("/api/summary", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          note: {
+            id: targetNote.id,
+            title: targetNote.title,
+            category: targetNote.category,
+          },
+          messages: messages.map((chatMessage) => ({
+            role: chatMessage.role,
+            content: chatMessage.content,
+          })),
+        }),
+      });
+      const summary = (await response.json()) as SummaryResponseBody;
+
+      setSummaryTitle(summary.summaryTitle);
+      setOneLineReview(summary.oneLineReview);
+      setEssay(summary.essay);
+      setKeywords(summary.keywords.slice(0, 3));
+      setEmotionTags(summary.emotionTags.slice(0, 3));
+      setTasteHint(summary.tasteHint);
+    } catch {
+      setMessage("감상문 정리에 실패했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   function handleTagChange(value: string, setter: (nextTags: string[]) => void) {
     setter(
@@ -130,9 +168,11 @@ export default function SummaryEditor() {
             대화를 감상문으로 묶는 자리
           </h1>
           <p className="mt-4 text-[#6b4b35]">
-            {note
-              ? `"${note.title}"에 대해 나눈 대화를 바탕으로 감상문을 만들었어요.`
-              : "저장된 노트를 확인하고 있어요."}
+            {isLoading
+              ? "감상을 정리하는 중이에요..."
+              : note
+                ? `"${note.title}"에 대해 나눈 대화를 바탕으로 감상문을 만들었어요.`
+                : "저장된 노트를 확인하고 있어요."}
           </p>
 
           <label className="mt-8 block text-sm font-bold text-[#5b351f]" htmlFor="summary-title">
@@ -140,8 +180,9 @@ export default function SummaryEditor() {
           </label>
           <input
             id="summary-title"
-            className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 text-xl font-bold text-[#3f2a1d] outline-none"
+            className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 text-xl font-bold text-[#3f2a1d] outline-none disabled:opacity-60"
             value={summaryTitle}
+            disabled={isLoading}
             onChange={(event) => setSummaryTitle(event.target.value)}
           />
 
@@ -150,8 +191,9 @@ export default function SummaryEditor() {
           </label>
           <input
             id="summary-one-line"
-            className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium text-[#5b351f] outline-none"
+            className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium text-[#5b351f] outline-none disabled:opacity-60"
             value={oneLineReview}
+            disabled={isLoading}
             onChange={(event) => setOneLineReview(event.target.value)}
           />
 
@@ -160,8 +202,9 @@ export default function SummaryEditor() {
           </label>
           <textarea
             id="summary-essay"
-            className="mt-2 min-h-80 w-full resize-y rounded-[22px] border border-[#8a5a2f]/20 bg-[#fff8eb] px-5 py-4 leading-8 text-[#5b351f] outline-none"
-            value={essay}
+            className="mt-2 min-h-80 w-full resize-y rounded-[22px] border border-[#8a5a2f]/20 bg-[#fff8eb] px-5 py-4 leading-8 text-[#5b351f] outline-none disabled:opacity-60"
+            value={isLoading ? "감상을 정리하는 중이에요..." : essay}
+            disabled={isLoading}
             onChange={(event) => setEssay(event.target.value)}
           />
 
@@ -170,8 +213,9 @@ export default function SummaryEditor() {
               4. 핵심 키워드 3개
               <input
                 id="summary-keywords"
-                className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium outline-none"
+                className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium outline-none disabled:opacity-60"
                 value={keywordText}
+                disabled={isLoading}
                 onChange={(event) => handleTagChange(event.target.value, setKeywords)}
               />
             </label>
@@ -179,8 +223,9 @@ export default function SummaryEditor() {
               5. 감정 태그 3개
               <input
                 id="summary-emotions"
-                className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium outline-none"
+                className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium outline-none disabled:opacity-60"
                 value={emotionText}
+                disabled={isLoading}
                 onChange={(event) => handleTagChange(event.target.value, setEmotionTags)}
               />
             </label>
@@ -191,8 +236,9 @@ export default function SummaryEditor() {
           </label>
           <input
             id="summary-taste"
-            className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium text-[#5b351f] outline-none"
+            className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium text-[#5b351f] outline-none disabled:opacity-60"
             value={tasteHint}
+            disabled={isLoading}
             onChange={(event) => setTasteHint(event.target.value)}
           />
 
@@ -202,7 +248,8 @@ export default function SummaryEditor() {
             <button
               type="button"
               onClick={handleSave}
-              className="rounded-2xl bg-[#8a5a2f] px-5 py-3 text-center font-bold text-[#fff8eb]"
+              disabled={isLoading}
+              className="rounded-2xl bg-[#8a5a2f] px-5 py-3 text-center font-bold text-[#fff8eb] disabled:cursor-not-allowed disabled:opacity-60"
             >
               저장하기
             </button>
