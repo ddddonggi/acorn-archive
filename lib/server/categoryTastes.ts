@@ -13,7 +13,7 @@ export async function regenerateCategoryTaste(
   category: NoteCategory,
 ): Promise<void> {
   const result = await sql`
-    SELECT s.summary_title, s.artist, s.one_line_review, s.taste_hint, s.emotion_tags
+    SELECT s.summary_title, s.artist, s.one_line_review, s.essay, s.taste_hint, s.emotion_tags, s.keywords
     FROM acorn_summaries s
     JOIN acorn_notes n ON s.note_id = n.id
     WHERE s.user_id = ${username} AND n.category = ${category}
@@ -26,8 +26,10 @@ export async function regenerateCategoryTaste(
     summaryTitle: r.summary_title,
     artist: r.artist ?? "",
     oneLineReview: r.one_line_review,
+    essay: r.essay ?? "",
     tasteHint: r.taste_hint,
     emotionTags: Array.isArray(r.emotion_tags) ? r.emotion_tags : [],
+    keywords: Array.isArray(r.keywords) ? r.keywords : [],
   }));
 
   const systemInstruction = buildCategoryTasteSystemPrompt(category);
