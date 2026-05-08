@@ -3,12 +3,14 @@
 import { useRouter } from "next/navigation";
 import { isLoggedIn } from "@/lib/auth";
 
+type TailDir = "down" | "down-left" | "down-right" | "up" | "up-left" | "up-right";
+
 type Card = {
   href: string;
   title: string;
   description: string;
   style: React.CSSProperties;
-  tailDir?: "down" | "down-left" | "down-right";
+  tailDir?: TailDir;
 };
 
 const cards: Card[] = [
@@ -17,21 +19,21 @@ const cards: Card[] = [
     title: "영상",
     description: "작은 TV 앞에서 떠오른 마음을 기록해요.",
     style: { top: "43%", left: "26%" },
-    tailDir: "down-left",
+    tailDir: "up-right",
   },
   {
     href: "/media",
     title: "미디어",
     description: "책장 한 칸에 생각의 조각을 꽂아둬요.",
     style: { top: "64%", left: "7%" },
-    tailDir: "down",
+    tailDir: "down-right",
   },
   {
     href: "/taste",
     title: "내 취향",
     description: "쌓인 감상으로 취향을 발견해요.",
     style: { top: "27%", left: "52%" },
-    tailDir: "down",
+    tailDir: "up",
   },
   {
     href: "/music",
@@ -50,11 +52,16 @@ function Bubble({
 }: {
   children: React.ReactNode;
   style: React.CSSProperties;
-  tailDir?: "down" | "down-left" | "down-right";
+  tailDir?: TailDir;
   onClick: () => void;
 }) {
+  const isUp = tailDir.startsWith("up");
   const tailX =
-    tailDir === "down" ? "50%" : tailDir === "down-left" ? "30%" : "70%";
+    tailDir === "down" || tailDir === "up"
+      ? "50%"
+      : tailDir === "down-left" || tailDir === "up-left"
+        ? "30%"
+        : "70%";
 
   return (
     <button
@@ -68,28 +75,34 @@ function Bubble({
         {children}
         {/* 말풍선 꼬리 */}
         <span
-          className="pointer-events-none absolute -bottom-3"
+          className="pointer-events-none absolute"
           style={{
+            ...(isUp ? { top: "-12px" } : { bottom: "-12px" }),
             left: tailX,
             transform: "translateX(-50%)",
             width: 0,
             height: 0,
             borderLeft: "9px solid transparent",
             borderRight: "9px solid transparent",
-            borderTop: "12px solid rgba(255,255,255,0.68)",
+            ...(isUp
+              ? { borderBottom: "12px solid rgba(255,255,255,0.68)" }
+              : { borderTop: "12px solid rgba(255,255,255,0.68)" }),
           }}
         />
         {/* 꼬리 테두리 (살짝 안쪽) */}
         <span
-          className="pointer-events-none absolute -bottom-[10px]"
+          className="pointer-events-none absolute"
           style={{
+            ...(isUp ? { top: "-10px" } : { bottom: "-10px" }),
             left: tailX,
             transform: "translateX(-50%)",
             width: 0,
             height: 0,
             borderLeft: "7px solid transparent",
             borderRight: "7px solid transparent",
-            borderTop: "10px solid rgba(255,255,255,0.68)",
+            ...(isUp
+              ? { borderBottom: "10px solid rgba(255,255,255,0.68)" }
+              : { borderTop: "10px solid rgba(255,255,255,0.68)" }),
           }}
         />
       </div>
@@ -128,7 +141,7 @@ export default function HomeContent() {
             <p className="text-[1.1vw] font-black leading-tight text-[#3f2a1d]">
               {card.title}
             </p>
-            <p className="mt-0.5 text-[0.8vw] leading-snug text-[#6b4b35]">
+            <p className="mt-0.5 line-clamp-2 text-[0.8vw] leading-snug text-[#6b4b35]">
               {card.description}
             </p>
           </Bubble>
@@ -137,16 +150,14 @@ export default function HomeContent() {
         {/* 오늘의 창고 메모 말풍선 */}
         <Bubble
           style={{ top: "27%", left: "64%", width: "15%" }}
-          tailDir="down-left"
+          tailDir="up"
           onClick={() => go("/taste")}
         >
           <p className="flex items-center gap-1 text-[0.75vw] font-semibold text-[#697a4c]">
             <span>★</span> 오늘의 창고 메모
           </p>
-          <p className="mt-0.5 text-[0.8vw] leading-snug text-[#3f2a1d]">
-            잔잔한 여운이 남는 이야기,<br />
-            오늘은 '리틀 포레스트'를<br />
-            만나볼까요?
+          <p className="mt-0.5 line-clamp-2 text-[0.8vw] leading-snug text-[#3f2a1d]">
+            잔잔한 여운이 남는 이야기, 오늘은 '리틀 포레스트'를 만나볼까요?
           </p>
         </Bubble>
       </div>
