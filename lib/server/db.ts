@@ -14,6 +14,10 @@ export async function ensureDatabase() {
   `;
 
   await sql`
+    ALTER TABLE acorn_users ADD COLUMN IF NOT EXISTS ai_initialized BOOLEAN NOT NULL DEFAULT FALSE
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS acorn_notes (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES acorn_users(username) ON DELETE CASCADE,

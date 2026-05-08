@@ -4,6 +4,8 @@ export type RecSummaryInput = {
   summaryTitle: string;
   artist: string;
   oneLineReview: string;
+  essay: string;
+  keywords: string[];
   tasteHint: string;
   emotionTags: string[];
 };
@@ -30,7 +32,7 @@ function toContext(summaries: RecSummaryInput[]): string {
   return summaries
     .map(
       (s) =>
-        `- ${s.summaryTitle}${s.artist ? ` (${s.artist})` : ""}: ${s.oneLineReview} / 힌트: ${s.tasteHint} / 태그: ${s.emotionTags.join(", ")}`,
+        `- ${s.summaryTitle}${s.artist ? ` (${s.artist})` : ""}: ${s.oneLineReview} / 에세이: ${s.essay} / 힌트: ${s.tasteHint} / 키워드: ${s.keywords.join(", ")} / 태그: ${s.emotionTags.join(", ")}`,
     )
     .join("\n");
 }
@@ -79,7 +81,7 @@ ${toContext(summaries)}
 ${toWatchedList(summaries)}
 
 추천 기준:
-- 최근 감상에서 드러난 분위기, 감정 태그, tasteHint를 우선 반영해.
+- 최근 감상에서 드러난 에세이 내용, 키워드, 감정 태그, 취향 힌트를 종합해 우선 반영해.
 - 너무 유명한 대표작만 고르지 말고, 적당히 신선한 추천도 고려해.
 - 단, 덜 알려진 작품만 억지로 고르지 말고 사용자의 취향 적합도를 가장 중요하게 봐.
 - 실제 존재하는 작품 1개만 추천해.
@@ -98,7 +100,7 @@ ${toContext(summaries)}
 ${toWatchedList(summaries)}
 
 추천 기준:
-- 전체 감상에서 반복적으로 나타난 취향, 감정, 분위기를 우선 반영해.
+- 전체 감상의 에세이, 키워드, 감정 태그, 취향 힌트에서 반복적으로 나타난 패턴을 우선 반영해.
 - 너무 유명한 대표작만 고르지 말고, 적당히 신선한 추천도 고려해.
 - 단, 덜 알려진 작품만 억지로 고르지 말고 사용자의 장기 취향과의 적합도를 가장 중요하게 봐.
 - 실제 존재하는 작품 1개만 추천해.

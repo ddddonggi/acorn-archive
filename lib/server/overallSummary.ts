@@ -3,12 +3,14 @@ import { generateGeminiText } from "@/lib/ai/gemini";
 import {
   buildOverallSummarySystemPrompt,
   buildOverallSummaryUserPrompt,
+  type OverallSummaryInput,
 } from "@/lib/ai/overallSummaryPrompt";
 import { logAiCall } from "@/lib/server/aiLogger";
 
 export async function regenerateOverallSummary(username: string): Promise<string> {
   const result = await sql`
-    SELECT s.summary_title, s.one_line_review, n.category
+    SELECT s.summary_title, s.one_line_review, s.essay, n.category,
+           n.traditional_culture_score, n.traditional_culture_memo
     FROM acorn_summaries s
     JOIN acorn_notes n ON s.note_id = n.id
     WHERE s.user_id = ${username}
@@ -18,10 +20,13 @@ export async function regenerateOverallSummary(username: string): Promise<string
 
   if (result.rows.length === 0) return "";
 
-  const summaries = result.rows.map((r) => ({
+  const summaries: OverallSummaryInput[] = result.rows.map((r) => ({
     title: r.summary_title as string,
-    oneLineReview: r.one_line_review as string,
     category: r.category as string,
+    oneLineReview: r.one_line_review as string,
+    essay: r.essay as string,
+    traditionalCultureScore: (r.traditional_culture_score as number) ?? 0,
+    traditionalCultureMemo: (r.traditional_culture_memo as string) ?? "",
   }));
 
   const systemInstruction = buildOverallSummarySystemPrompt();

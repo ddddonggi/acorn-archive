@@ -12,12 +12,25 @@ export function buildOverallSummarySystemPrompt(): string {
 - 한국어. 텍스트만 반환한다.`;
 }
 
-export function buildOverallSummaryUserPrompt(
-  summaries: { title: string; oneLineReview: string; category: string }[],
-): string {
+export type OverallSummaryInput = {
+  title: string;
+  category: string;
+  oneLineReview: string;
+  essay: string;
+  traditionalCultureScore: number;
+  traditionalCultureMemo: string;
+};
+
+export function buildOverallSummaryUserPrompt(summaries: OverallSummaryInput[]): string {
   const context = summaries
-    .map((s) => `[${s.category}] ${s.title}: ${s.oneLineReview}`)
-    .join("\n");
+    .map((s) => {
+      const lines = [`[${s.category}] ${s.title}`, `감상: ${s.essay || s.oneLineReview}`];
+      if (s.traditionalCultureScore >= 40 && s.traditionalCultureMemo) {
+        lines.push(`전통문화 관심: ${s.traditionalCultureMemo}`);
+      }
+      return lines.join("\n");
+    })
+    .join("\n\n");
 
   return `아래는 사용자의 감상 기록이다:
 

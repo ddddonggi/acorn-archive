@@ -102,14 +102,12 @@ export async function POST(request: Request) {
     if (noteCategory) {
       // Category taste: await so client sees fresh text on next fetch
       await regenerateCategoryTaste(username, noteCategory).catch(() => {});
-      // Recent recs: fire-and-forget
-      void regenerateRecentRec(username, noteCategory).catch(() => {});
-      // Full recs: fire-and-forget (uses all summaries, heavier)
-      void regenerateFullRec(username, noteCategory).catch(() => {});
-      // Traditional culture: fire-and-forget
-      void analyzeTraditionalCulture(noteId, summary.summaryTitle).catch(() => {});
-      // Overall summary: fire-and-forget
-      void regenerateOverallSummary(username).catch(() => {});
+      // Others run in parallel, overall_summary waits for all to finish
+      void Promise.all([
+        regenerateRecentRec(username, noteCategory).catch(() => {}),
+        regenerateFullRec(username, noteCategory).catch(() => {}),
+        analyzeTraditionalCulture(noteId, summary.summaryTitle).catch(() => {}),
+      ]).then(() => regenerateOverallSummary(username).catch(() => {}));
     }
 
     return NextResponse.json({ summary: mapSummaryRow(result.rows[0]) });

@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { sql, ensureDatabase } from "@/lib/server/db";
+import { initializeUserAiIfNeeded } from "@/lib/server/initializeUserAi";
 
 export async function POST(request: Request) {
   try {
@@ -30,6 +31,8 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
+
+    void initializeUserAiIfNeeded(user.username).catch(() => {});
 
     return NextResponse.json({
       ok: true,
