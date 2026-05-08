@@ -46,8 +46,8 @@ export default function TasteProfile() {
   const [showRec, setShowRec] = useState(false);
   const [recentRecs, setRecentRecs] = useState<AiRec[]>([]);
   const [fullRecs, setFullRecs] = useState<AiRec[]>([]);
-  const [isLoadingRecentRecs, setIsLoadingRecentRecs] = useState(false);
   const [recentRecsLoaded, setRecentRecsLoaded] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [categoryTasteTexts, setCategoryTasteTexts] = useState<Partial<Record<NoteCategory, string>>>({});
 
   useEffect(() => {
@@ -101,7 +101,6 @@ export default function TasteProfile() {
   async function loadRecentRecs() {
     const user = getCurrentUser();
     if (!user) return;
-    setIsLoadingRecentRecs(true);
     try {
       const resp = await fetch(
         `/api/recommendations?username=${encodeURIComponent(user.username)}&type=recent`,
@@ -111,8 +110,6 @@ export default function TasteProfile() {
       setRecentRecsLoaded(true);
     } catch {
       setRecentRecs([]);
-    } finally {
-      setIsLoadingRecentRecs(false);
     }
   }
 
@@ -127,6 +124,29 @@ export default function TasteProfile() {
       setFullRecs(data.recommendations ?? []);
     } catch {
       setFullRecs([]);
+    }
+  }
+
+  async function handleRefreshAll() {
+    const user = getCurrentUser();
+    if (!user) return;
+    setIsRefreshing(true);
+    try {
+      const resp = await fetch(
+        `/api/refresh-all?username=${encodeURIComponent(user.username)}`,
+        { method: "POST" },
+      );
+      const data = (await resp.json()) as {
+        recentRecs?: AiRec[];
+        fullRecs?: AiRec[];
+      };
+      setRecentRecs(data.recentRecs ?? []);
+      setRecentRecsLoaded(true);
+      setFullRecs(data.fullRecs ?? []);
+    } catch {
+      // leave existing state
+    } finally {
+      setIsRefreshing(false);
     }
   }
 
@@ -185,17 +205,14 @@ export default function TasteProfile() {
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setRecentRecsLoaded(false);
-                  void loadRecentRecs();
-                }}
-                disabled={isLoadingRecentRecs}
-                aria-label="최근 감상 기반 추천 새로고침"
+                onClick={() => void handleRefreshAll()}
+                disabled={isRefreshing}
+                aria-label="추천 전체 새로고침"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-[#8a5a2f]/20 bg-[#fbf1dd] text-[#8a5a2f] hover:bg-[#ead7b8] disabled:opacity-40"
               >
                 <span
                   style={{ display: "inline-block" }}
-                  className={isLoadingRecentRecs ? "animate-spin" : ""}
+                  className={isRefreshing ? "animate-spin" : ""}
                 >
                   ↻
                 </span>
@@ -207,9 +224,9 @@ export default function TasteProfile() {
             {/* 최근 감상 기반 */}
             <section className="mt-6">
               <h3 className="mb-4 text-sm font-bold text-[#697a4c]">최근 감상 기반</h3>
-              {isLoadingRecentRecs ? (
+              {isRefreshing ? (
                 <div className="flex h-32 items-center justify-center rounded-[18px] bg-[#fff8eb]">
-                  <p className="text-sm text-[#6b4b35]">AI가 최근 감상을 분석하는 중이에요…</p>
+                  <p className="text-sm text-[#6b4b35]">AI가 전체 감상을 분석하는 중이에요…</p>
                 </div>
               ) : recentRecs.length === 0 ? (
                 <div className="flex h-32 items-center justify-center rounded-[18px] bg-[#fff8eb]">
