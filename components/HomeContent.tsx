@@ -243,7 +243,7 @@ export default function HomeContent() {
         <Bubble
           style={{ top: "5%", left: "64%", width: "32.5%" }}
           tailDir="down-left"
-          minHeight={30 || undefined}
+          minHeight={30}
           onClick={() => go("/taste")}
         >
           <p className="flex items-center gap-1 text-[0.75vw] font-semibold text-[#697a4c]">
