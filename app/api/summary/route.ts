@@ -45,6 +45,7 @@ export async function POST(request: Request) {
 
     const recentMessages = messages
       .filter((message) => isValidMessage(message))
+      .filter((message) => isUsefulContextMessage(message))
       .slice(-MAX_CONTEXT_MESSAGES);
     debugContext = {
       ...debugContext,
@@ -95,6 +96,20 @@ function isValidMessage(message: unknown): message is { role: "user" | "assistan
     typeof candidate.content === "string" &&
     candidate.content.trim().length > 0
   );
+}
+
+function isUsefulContextMessage(message: { role: "user" | "assistant"; content: string }) {
+  const content = message.content.trim();
+
+  if (!content || content === "지금은 AI가 잠시 쉬고 있어요. 다시 시도해주세요.") {
+    return false;
+  }
+
+  if (message.role === "assistant") {
+    return /[.?!。！？]$|[요까어죠다]$/.test(content);
+  }
+
+  return true;
 }
 
 function normalizeSummary(value: unknown): SummaryResponseBody {

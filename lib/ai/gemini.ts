@@ -54,6 +54,9 @@ export async function generateGeminiText({
         generationConfig: {
           temperature,
           maxOutputTokens,
+          thinkingConfig: {
+            thinkingBudget: 0,
+          },
         },
       }),
     },
