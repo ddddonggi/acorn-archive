@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { generateTasteProfile, TasteProfile as TasteProfileData } from "@/lib/taste";
 
@@ -24,6 +24,16 @@ export default function TasteProfile() {
   const router = useRouter();
   const [profile, setProfile] = useState<TasteProfileData>(emptyProfile);
   const [isLoading, setIsLoading] = useState(true);
+  const recRef = useRef<HTMLDivElement>(null);
+
+  function scrollRec(dir: "prev" | "next") {
+    const el = recRef.current;
+    if (!el) return;
+    const card = el.querySelector("article");
+    if (!card) return;
+    const step = card.offsetWidth + 16;
+    el.scrollBy({ left: dir === "next" ? step : -step, behavior: "smooth" });
+  }
 
   useEffect(() => {
     if (!getCurrentUser()) {
@@ -133,16 +143,44 @@ export default function TasteProfile() {
           </div>
 
           <section className="mt-5 rounded-[22px] bg-[#fff8eb] p-6">
-            <div>
-              <h2 className="text-2xl font-black text-[#3f2a1d]">추천 콘텐츠</h2>
-              <p className="mt-2 text-[#6b4b35]">
-                지금은 저장된 감상 분위기를 바탕으로 한 간단한 추천이에요.
-              </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-black text-[#3f2a1d]">추천 콘텐츠</h2>
+                <p className="mt-2 text-[#6b4b35]">
+                  지금은 저장된 감상 분위기를 바탕으로 한 간단한 추천이에요.
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => scrollRec("prev")}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[#8a5a2f]/20 bg-[#fbf1dd] text-[#8a5a2f] transition hover:bg-[#ead7b8]"
+                  aria-label="이전"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollRec("next")}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[#8a5a2f]/20 bg-[#fbf1dd] text-[#8a5a2f] transition hover:bg-[#ead7b8]"
+                  aria-label="다음"
+                >
+                  ›
+                </button>
+              </div>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div
+              ref={recRef}
+              className="mt-5 flex gap-4 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{ scrollSnapType: "x mandatory" }}
+            >
               {profile.recommendations.map((recommendation) => (
-                <article key={recommendation.title} className="rounded-[18px] border border-[#8a5a2f]/15 bg-[#fbf1dd] p-5">
+                <article
+                  key={recommendation.title}
+                  className="min-w-[260px] flex-shrink-0 rounded-[18px] border border-[#8a5a2f]/15 bg-[#fbf1dd] p-5"
+                  style={{ scrollSnapAlign: "start" }}
+                >
                   <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#697a4c]">
                     {categoryLabels[recommendation.category]}
                   </p>

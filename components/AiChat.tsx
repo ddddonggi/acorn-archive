@@ -227,7 +227,7 @@ export default function AiChat({ noteId }: AiChatProps) {
   }
 
   return (
-    <main className="page-shell">
+    <main className="flex-1 min-h-0 flex flex-col overflow-y-auto lg:overflow-hidden px-6 py-6">
       {debugInfo ? (
         <DebugErrorModal
           title="AI 응답 생성 중 오류가 발생했어요"
@@ -237,8 +237,8 @@ export default function AiChat({ noteId }: AiChatProps) {
         />
       ) : null}
 
-      <section className="mx-auto grid max-w-6xl gap-6 py-8 lg:grid-cols-[1fr_320px]">
-        <div className="warm-panel flex min-h-[680px] flex-col rounded-[24px] p-5 md:p-7">
+      <section className="mx-auto w-full grid max-w-6xl gap-6 py-2 lg:flex-1 lg:min-h-0 lg:grid-cols-[1fr_320px]">
+        <div className="warm-panel flex min-h-[480px] flex-col rounded-[24px] p-5 md:p-7 lg:min-h-0 lg:overflow-hidden">
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">
             AI 대화
           </p>
@@ -261,7 +261,7 @@ export default function AiChat({ noteId }: AiChatProps) {
 
           <div
             ref={scrollRef}
-            className="mt-8 flex-1 space-y-4 overflow-y-auto rounded-[22px] bg-[#f4e5c9]/70 p-4"
+            className="mt-8 flex-1 min-h-0 space-y-4 overflow-y-auto rounded-[22px] bg-[#f4e5c9]/70 p-4"
           >
             {messages.map((message) => {
               const isUser = message.role === "user";
@@ -310,7 +310,7 @@ export default function AiChat({ noteId }: AiChatProps) {
           </form>
         </div>
 
-        <aside className="warm-panel h-fit rounded-[24px] p-6">
+        <aside className="warm-panel h-fit self-start rounded-[24px] p-6">
           <h2 className="text-xl font-black text-[#3f2a1d]">감상문 정리</h2>
           <p className="mt-3 leading-7 text-[#6b4b35]">
             대화가 충분히 쌓이면 감상문처럼 정리해 저장할 수 있어요.

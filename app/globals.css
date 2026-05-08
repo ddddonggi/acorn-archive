@@ -13,8 +13,16 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+}
+
 body {
   margin: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background:
     radial-gradient(circle at 10% 10%, rgba(199, 131, 80, 0.16), transparent 24rem),
     linear-gradient(135deg, #fbf4e7 0%, var(--background) 48%, #efe0c5 100%);
@@ -28,7 +36,9 @@ a {
 }
 
 .page-shell {
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 24px;
 }
 
