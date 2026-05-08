@@ -1,81 +1,139 @@
-# 도토리 감상 창고
+# 취향 책장
 
-AI와 친구처럼 대화하며 음악, 미디어, 영상 감상을 기록하고 감상문처럼 정리하는 Next.js App Router 기반 웹사이트입니다.
+음악, 미디어, 영상을 감상한 뒤 AI와 대화하고, 나만의 감상문으로 차곡차곡 쌓아가는 공간.
+
+🔗 **배포 주소:** https://acorn-archive.vercel.app
+
+---
+
+## 소개
+
+**취향 책장**은 콘텐츠를 소비한 뒤의 감정과 생각을 기록하는 AI 감상 아카이브입니다.
+
+AI가 감상문을 대신 써주는 것이 아니라, 사용자가 자신의 말로 이야기할 수 있도록 질문을 던지고 대화를 이끌어갑니다. 대화가 쌓이면 AI가 그 내용을 바탕으로 담백한 감상문으로 정리해줍니다.
+
+---
+
+## 주요 기능
+
+### 📝 카테고리별 감상 기록
+- **음악** — 가사, 멜로디, 분위기, 듣고 싶은 상황
+- **미디어** — 책, 웹툰, 만화의 캐릭터, 서사, 세계관
+- **영상** — 영화, 영상의 장면, 인물, 연출, 메시지
+
+### 🤖 AI 대화
+- 각 카테고리 특성에 맞는 질문으로 감상을 끌어냄
+- 사용자가 말하지 않은 내용은 추가하지 않는 원칙
+- Google Gemini API 기반
+
+### 📄 감상문 자동 정리
+- 대화 내용을 바탕으로 짧고 담백한 감상문 생성
+- 제목, 한 줄 감상, 본문, 감정 태그, 키워드, 취향 힌트 포함
+- 음악의 경우 아티스트 정보 포함
+
+### 🎭 내 취향 분석
+- 누적된 감상문을 바탕으로 사용자 취향 프로필 생성
+- 카테고리별 취향 요약 및 전체 취향 분석
+- 취향 기반 콘텐츠 추천 (최근 감상 기반 / 전체 취향 기반)
+
+### 🖼️ 커버 이미지
+- 노트마다 커버 이미지 업로드 가능 (Vercel Blob 저장)
+
+---
 
 ## 기술 스택
 
-- Next.js App Router
-- React
-- TypeScript
-- Tailwind CSS
-- Vercel Marketplace Postgres 기반 사용자/노트/대화/감상문 저장
-- Gemini API 기반 감상 대화와 감상문 정리
+| 분류 | 기술 |
+|------|------|
+| 프레임워크 | Next.js 16 (App Router) |
+| 언어 | TypeScript |
+| 스타일링 | Tailwind CSS |
+| 데이터베이스 | Neon PostgreSQL (`@neondatabase/serverless`) |
+| AI | Google Gemini API |
+| 파일 저장 | Vercel Blob |
+| 인증 | 자체 구현 (bcryptjs + localStorage) |
+| 배포 | Vercel |
 
-## 주요 페이지
-
-- `/` 메인 페이지
-- `/login` 로그인
-- `/signup` 회원가입
-- `/music` 음악 감상 노트
-- `/media` 미디어 감상 노트
-- `/video` 영상 감상 노트
-- `/notes/[noteId]` AI 대화
-- `/summary?noteId=...` 감상문 정리
-- `/taste` 내 종합 취향
-
-## Gemini API 키 설정
-
-실제 API 키는 Google AI Studio에서 직접 발급해 사용합니다.
-
-1. 로컬 개발에서는 `.env.local` 파일에 아래처럼 넣습니다.
-
-```bash
-GEMINI_API_KEY=your-gemini-api-key
-GEMINI_MODEL=gemini-2.5-flash
-POSTGRES_URL=your-vercel-postgres-url
-```
-
-2. Vercel 배포에서는 Project Settings > Environment Variables에 `GEMINI_API_KEY`를 추가합니다.
-3. 모델을 바꾸고 싶으면 선택 사항으로 `GEMINI_MODEL`을 추가합니다. 없으면 `gemini-2.5-flash`를 사용합니다.
-
-## Vercel Postgres 설정
-
-Vercel Dashboard에서 Project > Storage 또는 Marketplace로 이동해 Postgres 데이터베이스를 연결합니다. 연결이 끝나면 Vercel이 `POSTGRES_URL` 같은 데이터베이스 환경변수를 프로젝트에 주입합니다.
-
-이 앱은 첫 API 요청 시 필요한 테이블을 자동으로 생성합니다.
-
-- `acorn_users`
-- `acorn_notes`
-- `acorn_chat_messages`
-- `acorn_summaries`
-
-회원가입/로그인과 감상 기록은 이제 브라우저 localStorage가 아니라 Vercel Postgres에 저장됩니다. 다른 컴퓨터에서도 같은 아이디로 로그인하면 같은 기록을 불러올 수 있습니다.
-
-`.env.local`은 Git에 커밋되지 않도록 `.gitignore`에 포함되어 있습니다. 공유 저장소에는 실제 API 키를 올리지 마세요.
+---
 
 ## 로컬 실행
 
+### 1. 의존성 설치
+
 ```bash
 npm install
+```
+
+### 2. 환경변수 설정
+
+`.env.local` 파일을 생성하고 아래 값을 채워넣습니다.
+
+```env
+STORAGE_POSTGRES_URL=your-neon-postgres-url
+GEMINI_API_KEY=your-gemini-api-key
+BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
+```
+
+| 변수 | 설명 | 발급처 |
+|------|------|--------|
+| `STORAGE_POSTGRES_URL` | Neon PostgreSQL 연결 문자열 | Vercel → Storage → Postgres |
+| `GEMINI_API_KEY` | Google Gemini API 키 | Google AI Studio |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob 읽기/쓰기 토큰 | Vercel → Storage → Blob |
+
+### 3. 개발 서버 실행
+
+```bash
 npm run dev
 ```
 
-브라우저에서 `http://localhost:3000`을 열어 확인합니다.
+브라우저에서 [http://localhost:3000](http://localhost:3000) 접속
 
-## 빌드 확인
+### 4. 프로덕션 빌드 확인
 
 ```bash
 npm run build
-npm run start
 ```
 
-## Vercel 배포
+> push 전에 빌드 오류가 없는지 반드시 확인하세요.
 
-Vercel에서 GitHub 저장소를 연결하면 기본 설정으로 배포할 수 있습니다.
+---
 
-- Framework Preset: Next.js
-- Build Command: `npm run build`
-- Output Directory: Next.js 기본값 사용
-- Install Command: `npm install`
+## 배포 (Vercel)
 
-현재 로그인 상태만 브라우저에 저장하고, 사용자 데이터와 감상 기록은 Vercel Postgres에 저장합니다.
+1. GitHub 저장소 연결
+2. Vercel → Storage에서 Neon Postgres, Blob 생성 및 프로젝트 연결
+3. `GEMINI_API_KEY` 환경변수 수동 추가
+4. `git push` 시 자동 배포
+
+---
+
+## 프로젝트 구조
+
+```
+acorn-archive/
+├── app/
+│   ├── api/
+│   │   ├── auth/             # 로그인·회원가입
+│   │   ├── notes/            # 노트 CRUD
+│   │   ├── messages/         # 대화 메시지
+│   │   ├── chat/             # Gemini 채팅
+│   │   ├── summaries/        # 감상문 저장·조회
+│   │   ├── summary/          # Gemini 감상문 생성
+│   │   ├── images/           # 커버 이미지 업로드
+│   │   ├── recommendations/  # 콘텐츠 추천
+│   │   ├── category-tastes/  # 카테고리별 취향
+│   │   └── overall-summary/  # 전체 취향 요약
+│   └── (pages)/              # 홈, 카테고리, 노트, 취향 페이지
+├── components/               # UI 컴포넌트
+├── lib/
+│   ├── ai/                   # Gemini API, 프롬프트
+│   └── server/               # DB 연결, 추천 로직
+└── public/
+    └── home-bg.png           # 홈 배경 일러스트
+```
+
+---
+
+## 라이선스
+
+MIT

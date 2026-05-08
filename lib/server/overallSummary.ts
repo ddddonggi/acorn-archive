@@ -4,6 +4,7 @@ import {
   buildOverallSummarySystemPrompt,
   buildOverallSummaryUserPrompt,
 } from "@/lib/ai/overallSummaryPrompt";
+import { logAiCall } from "@/lib/server/aiLogger";
 
 export async function regenerateOverallSummary(username: string): Promise<string> {
   const result = await sql`
@@ -23,15 +24,27 @@ export async function regenerateOverallSummary(username: string): Promise<string
     category: r.category as string,
   }));
 
+  const systemInstruction = buildOverallSummarySystemPrompt();
+  const userPrompt = buildOverallSummaryUserPrompt(summaries);
+
   const text = await generateGeminiText({
-    systemInstruction: buildOverallSummarySystemPrompt(),
-    prompt: buildOverallSummaryUserPrompt(summaries),
+    systemInstruction,
+    prompt: userPrompt,
     temperature: 0.7,
     maxOutputTokens: 200,
   });
 
   const summaryText = text.trim();
   if (!summaryText) return "";
+
+  void logAiCall({
+    promptType: "overall_summary",
+    userId: username,
+    inputSystem: systemInstruction,
+    inputUser: userPrompt,
+    output: summaryText,
+    metadata: { summaryCount: summaries.length },
+  }).catch(() => {});
 
   const now = new Date().toISOString();
   await sql`

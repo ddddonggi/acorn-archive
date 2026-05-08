@@ -118,10 +118,11 @@ function NoteSlot({
             alt=""
             style={{
               position: "absolute",
-              left: 0,
-              right: 0,
-              width: "100%",
-              top: "37%",
+              width: "83.33%",        // 5/6 길이
+              right: 0,               // 오른쪽 끝 기준 (왼쪽이면 left: 0)
+              top: "8%",              // 세로 시작 위치 (조정 가능)
+              transform: "rotate(90deg)",
+              transformOrigin: "right top",  // 오른쪽 상단을 pivot으로 회전
               zIndex: 2,
             }}
           />

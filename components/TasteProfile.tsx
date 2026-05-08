@@ -130,19 +130,19 @@ export default function TasteProfile() {
     }
   }
 
+  const shelfBg: React.CSSProperties = {
+    backgroundImage: "url('/bookshelf.png')",
+    backgroundSize: "120% 120%",
+    backgroundPosition: "50% 75%",
+  };
+
   if (isLoading) {
-    return (
-      <main className="page-shell flex items-center justify-center">
-        <section className="warm-panel w-full max-w-xl rounded-[24px] p-8 text-center md:p-10">
-          <h1 className="text-4xl font-black text-[#3f2a1d]">취향 리포트를 불러오는 중이에요</h1>
-        </section>
-      </main>
-    );
+    return <main className="page-shell" style={shelfBg} />;
   }
 
   if (profile.summaries.length === 0) {
     return (
-      <main className="page-shell flex items-center justify-center">
+      <main className="page-shell flex items-center justify-center" style={shelfBg}>
         <section className="warm-panel w-full max-w-xl rounded-[24px] p-8 text-center md:p-10">
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">
             내 종합 취향
@@ -166,19 +166,19 @@ export default function TasteProfile() {
 
   if (showRec) {
     return (
-      <main className="page-shell flex flex-col">
+      <main className="page-shell flex flex-col" style={shelfBg}>
         <section className="mx-auto w-full max-w-6xl flex-1 flex flex-col py-6">
-          <div className="warm-panel flex flex-1 flex-col rounded-[28px] p-7 md:p-10">
+          <div className="warm-panel relative flex flex-1 flex-col rounded-[28px] p-7 md:p-10">
+            <button
+              type="button"
+              onClick={() => setShowRec(false)}
+              aria-label="취향 리포트로 돌아가기"
+              className="absolute left-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full border border-[#8a5a2f]/20 bg-[#fbf1dd] text-xl text-[#8a5a2f] hover:bg-[#ead7b8]"
+            >
+              ‹
+            </button>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowRec(false)}
-                  aria-label="취향 리포트로 돌아가기"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[#8a5a2f]/20 bg-[#fbf1dd] text-xl text-[#8a5a2f] hover:bg-[#ead7b8]"
-                >
-                  ‹
-                </button>
                 <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">
                   나를 위한 추천
                 </p>
@@ -250,7 +250,7 @@ export default function TasteProfile() {
   const maxCategoryCount = Math.max(1, ...profile.categoryStats.map((cs) => cs.count));
 
   return (
-    <main className="page-shell flex flex-col">
+    <main className="page-shell flex flex-col" style={shelfBg}>
       <section className="mx-auto w-full max-w-6xl flex-1 flex flex-col py-6">
         <div className="warm-panel relative flex flex-1 flex-col rounded-[28px] p-7 md:p-9">
           <p className="text-2xl font-bold text-[#5b351f]">

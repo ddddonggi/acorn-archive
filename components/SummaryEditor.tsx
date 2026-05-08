@@ -7,7 +7,7 @@ import DebugErrorModal from "@/components/DebugErrorModal";
 import { SummaryResponseBody } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/auth";
 import { getMessagesByNoteId } from "@/lib/chat";
-import { getNoteById, StoredNote } from "@/lib/notes";
+import { getNoteById, StoredNote, updateNote } from "@/lib/notes";
 import { getSummaryByNoteId, saveSummary, StoredSummary } from "@/lib/summary";
 
 type SummaryApiResponse = SummaryResponseBody & {
@@ -165,15 +165,18 @@ export default function SummaryEditor() {
       return;
     }
 
-    const summary = await saveSummary(noteId, {
-      summaryTitle: summaryTitle.trim(),
-      artist: artist.trim(),
-      oneLineReview: oneLineReview.trim(),
-      essay: essay.trim(),
-      emotionTags,
-      keywords,
-      tasteHint: tasteHint.trim(),
-    });
+    const [summary] = await Promise.all([
+      saveSummary(noteId, {
+        summaryTitle: summaryTitle.trim(),
+        artist: artist.trim(),
+        oneLineReview: oneLineReview.trim(),
+        essay: essay.trim(),
+        emotionTags,
+        keywords,
+        tasteHint: tasteHint.trim(),
+      }),
+      updateNote(noteId, { title: summaryTitle.trim(), artist: artist.trim() }),
+    ]);
 
     if (!summary) {
       router.push("/login");
@@ -306,7 +309,7 @@ export default function SummaryEditor() {
               href={`/notes/${noteId}`}
               className="rounded-2xl border border-[#8a5a2f]/25 px-5 py-3 text-center font-bold text-[#5b351f]"
             >
-              대화로 돌아가기
+              이전으로 돌아가기
             </Link>
           </div>
         </div>

@@ -7,6 +7,7 @@ import {
   type RecSummaryInput,
 } from "@/lib/ai/recommendationPrompt";
 import type { NoteCategory } from "@/lib/notes";
+import { logAiCall } from "@/lib/server/aiLogger";
 
 export async function regenerateRecentRec(username: string, category: NoteCategory): Promise<void> {
   const result = await sql`
@@ -28,9 +29,12 @@ export async function regenerateRecentRec(username: string, category: NoteCatego
     emotionTags: Array.isArray(r.emotion_tags) ? r.emotion_tags : [],
   }));
 
+  const systemInstruction = buildRecSystemPrompt(category);
+  const userPrompt = buildRecentRecUserPrompt(category, summaries);
+
   const text = await generateGeminiText({
-    systemInstruction: buildRecSystemPrompt(category),
-    prompt: buildRecentRecUserPrompt(category, summaries),
+    systemInstruction,
+    prompt: userPrompt,
     temperature: 0.7,
     maxOutputTokens: 300,
   });
@@ -38,6 +42,15 @@ export async function regenerateRecentRec(username: string, category: NoteCatego
   const parsed = JSON.parse(extractJsonObject(text)) as Partial<RecOutput>;
   const title = parsed.title ?? "";
   if (!title) return;
+
+  void logAiCall({
+    promptType: "recent_rec",
+    userId: username,
+    inputSystem: systemInstruction,
+    inputUser: userPrompt,
+    output: text,
+    metadata: { category, summaryCount: summaries.length },
+  }).catch(() => {});
 
   const now = new Date().toISOString();
   await sql`

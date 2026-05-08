@@ -125,6 +125,20 @@ export async function ensureDatabase() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS acorn_ai_logs (
+      id TEXT PRIMARY KEY,
+      prompt_type TEXT NOT NULL,
+      user_id TEXT,
+      note_id TEXT,
+      input_system TEXT NOT NULL DEFAULT '',
+      input_user TEXT NOT NULL DEFAULT '',
+      output TEXT NOT NULL DEFAULT '',
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
 }
 
 export function normalizeDate(value: Date | string) {

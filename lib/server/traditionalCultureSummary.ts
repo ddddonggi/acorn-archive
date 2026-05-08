@@ -4,6 +4,7 @@ import {
   buildTraditionalCultureSummarySystemPrompt,
   buildTraditionalCultureSummaryUserPrompt,
 } from "@/lib/ai/traditionalCultureSummaryPrompt";
+import { logAiCall } from "@/lib/server/aiLogger";
 
 export async function regenerateTraditionalCultureSummary(username: string): Promise<string> {
   const result = await sql`
@@ -21,15 +22,27 @@ export async function regenerateTraditionalCultureSummary(username: string): Pro
     memo: r.traditional_culture_memo as string,
   }));
 
+  const systemInstruction = buildTraditionalCultureSummarySystemPrompt();
+  const userPrompt = buildTraditionalCultureSummaryUserPrompt(memos);
+
   const text = await generateGeminiText({
-    systemInstruction: buildTraditionalCultureSummarySystemPrompt(),
-    prompt: buildTraditionalCultureSummaryUserPrompt(memos),
+    systemInstruction,
+    prompt: userPrompt,
     temperature: 0.4,
     maxOutputTokens: 400,
   });
 
   const summaryText = text.trim();
   if (!summaryText) return "";
+
+  void logAiCall({
+    promptType: "traditional_culture_summary",
+    userId: username,
+    inputSystem: systemInstruction,
+    inputUser: userPrompt,
+    output: summaryText,
+    metadata: { memoCount: memos.length },
+  }).catch(() => {});
 
   const now = new Date().toISOString();
   await sql`

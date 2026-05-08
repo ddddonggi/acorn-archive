@@ -33,6 +33,41 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ noteId: string }> },
+) {
+  try {
+    const { noteId } = await params;
+    const body = (await request.json()) as { username?: string; title?: string; artist?: string };
+    const { username, title, artist } = body;
+
+    if (!username) {
+      return NextResponse.json({ note: null }, { status: 400 });
+    }
+
+    await ensureDatabase();
+
+    const result = await sql`
+      UPDATE acorn_notes
+      SET
+        title = COALESCE(${title ?? null}, title),
+        artist = COALESCE(${artist ?? null}, artist),
+        updated_at = NOW()
+      WHERE id = ${noteId} AND user_id = ${username}
+      RETURNING id, user_id, category, title, artist, color, image_url, created_at, updated_at
+    `;
+    const note = result.rows[0] ? mapNoteRow(result.rows[0]) : null;
+
+    return NextResponse.json({ note });
+  } catch (error) {
+    return NextResponse.json(
+      { note: null, message: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
+    );
+  }
+}
+
 function mapNoteRow(row: any): StoredNote {
   return {
     id: row.id,

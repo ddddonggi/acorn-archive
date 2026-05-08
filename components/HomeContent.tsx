@@ -31,7 +31,7 @@ const cards: Card[] = [
   },
   {
     href: "/taste",
-    title: "내 취향",
+    title: "내 취향/추천",
     description: "쌓인 감상으로 취향을 발견해요.",
     style: { top: "5%", left: "47%", width: "13.0%" },
     tailDir: "up",
@@ -45,27 +45,17 @@ const cards: Card[] = [
   },
 ];
 
-const BUBBLE_LABELS: Record<string, string> = {
-  "/video": "영상",
-  "/media": "미디어",
-  "/taste": "내 취향",
-  "/music": "음악",
-  memo: "창고 메모",
-};
-
 function Bubble({
   children,
   style,
   tailDir = "down",
   noTail = false,
-  minHeight,
   onClick,
 }: {
   children: React.ReactNode;
   style: React.CSSProperties;
   tailDir?: TailDir;
   noTail?: boolean;
-  minHeight?: number;
   onClick: () => void;
 }) {
   const isUp = tailDir.startsWith("up");
@@ -85,7 +75,6 @@ function Bubble({
     >
       <div
         className="relative rounded-2xl border border-white/50 bg-white/68 px-5 py-3 shadow-lg backdrop-blur-md"
-        style={minHeight ? { minHeight: `${minHeight}vh` } : undefined}
       >
         {children}
         {!noTail && (
@@ -127,78 +116,9 @@ function Bubble({
   );
 }
 
-const DEFAULT_HEIGHTS: Record<string, number> = {
-  "/video": 0,
-  "/media": 0,
-  "/taste": 0,
-  "/music": 0,
-  memo: 0,
-};
-
-function HeightSidebar({
-  heights,
-  onChange,
-  onClose,
-}: {
-  heights: Record<string, number>;
-  onChange: (key: string, val: number) => void;
-  onClose: () => void;
-}) {
-  return (
-    <div className="absolute right-0 top-0 z-50 flex h-full w-56 flex-col border-l border-white/40 bg-white/95 shadow-2xl backdrop-blur-md">
-      <div className="flex items-center justify-between border-b border-[#e8ddd4] px-4 py-3">
-        <span className="text-xs font-bold text-[#3f2a1d]">말풍선 높이 조절</span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-sm leading-none text-[#6b4b35] hover:text-[#3f2a1d]"
-        >
-          ✕
-        </button>
-      </div>
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
-        {Object.entries(BUBBLE_LABELS).map(([key, label]) => {
-          const val = heights[key];
-          return (
-            <div key={key}>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[#3f2a1d]">{label}</span>
-                <span className="rounded bg-[#f5efe8] px-1.5 py-0.5 font-mono text-[10px] text-[#6b4b35]">
-                  {val === 0 ? "auto" : `${val}vh`}
-                </span>
-              </div>
-              {/* 높이 시각 바 */}
-              <div className="mb-1.5 flex h-3 w-full overflow-hidden rounded-full bg-[#e8ddd4]">
-                <div
-                  className="rounded-full bg-[#697a4c] transition-all"
-                  style={{ width: val === 0 ? "4px" : `${(val / 20) * 100}%` }}
-                />
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={20}
-                step={1}
-                value={val}
-                onChange={(e) => onChange(key, Number(e.target.value))}
-                className="w-full accent-[#697a4c]"
-              />
-              <div className="mt-0.5 flex justify-between text-[9px] text-[#a08060]">
-                <span>auto</span>
-                <span>20%</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 export default function HomeContent() {
   const router = useRouter();
-  const [heights, setHeights] = useState(DEFAULT_HEIGHTS);
-  const [showSidebar, setShowSidebar] = useState(false);
   const [overallSummary, setOverallSummary] = useState<string | null>(undefined as unknown as null);
 
   useEffect(() => {
@@ -215,10 +135,6 @@ export default function HomeContent() {
 
   function go(href: string) {
     router.push(isLoggedIn() ? href : "/login");
-  }
-
-  function setHeight(key: string, val: number) {
-    setHeights((prev) => ({ ...prev, [key]: val }));
   }
 
   return (
@@ -240,7 +156,6 @@ export default function HomeContent() {
             key={card.href}
             style={card.style}
             noTail
-            minHeight={heights[card.href] || undefined}
             onClick={() => go(card.href)}
           >
             <p className="text-[1.1vw] font-black leading-tight text-[#3f2a1d]">
@@ -256,7 +171,7 @@ export default function HomeContent() {
         <Bubble
           style={{ bottom: "60%", left: "64%", width: "32.5%" }}
           tailDir="down-left"
-          onClick={() => {}}
+          onClick={() => { }}
         >
           <p className="flex items-center gap-1 text-[0.75vw] font-semibold text-[#697a4c]">
             <span>★</span> 오늘의 창고 메모
@@ -266,23 +181,7 @@ export default function HomeContent() {
           </p>
         </Bubble>
 
-        {/* 높이 조절 사이드바 토글 탭 */}
-        <button
-          type="button"
-          onClick={() => setShowSidebar((v) => !v)}
-          className="absolute right-0 top-1/2 z-50 -translate-y-1/2 rounded-l-lg border border-r-0 border-white/40 bg-white/80 px-1.5 py-3 text-[10px] font-bold text-[#3f2a1d] shadow backdrop-blur-sm hover:bg-white"
-          style={{ writingMode: "vertical-rl" }}
-        >
-          높이 조절
-        </button>
 
-        {showSidebar && (
-          <HeightSidebar
-            heights={heights}
-            onChange={setHeight}
-            onClose={() => setShowSidebar(false)}
-          />
-        )}
       </div>
 
       {/* 모바일 */}

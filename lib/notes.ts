@@ -75,6 +75,25 @@ export async function createNote(category: NoteCategory, title: string, artist: 
   return data.note ?? null;
 }
 
+export async function updateNote(noteId: string, fields: { title?: string; artist?: string }) {
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const response = await fetch(`/api/notes/${encodeURIComponent(noteId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: currentUser.username, ...fields }),
+  });
+  const data = (await response.json()) as { note?: StoredNote | null };
+
+  window.dispatchEvent(new Event("acorn-notes-changed"));
+
+  return data.note ?? null;
+}
+
 export async function uploadNoteImage(noteId: string, file: File) {
   const currentUser = getCurrentUser();
 

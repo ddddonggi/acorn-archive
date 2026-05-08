@@ -7,6 +7,7 @@ import {
   SUMMARY_FALLBACK,
 } from "@/lib/ai/summaryPrompt";
 import { SummaryRequestBody, SummaryResponseBody } from "@/lib/ai/types";
+import { logAiCall } from "@/lib/server/aiLogger";
 
 const MAX_CONTEXT_MESSAGES = 20;
 
@@ -51,17 +52,29 @@ export async function POST(request: Request) {
       ...debugContext,
       recentMessages,
     };
+    const systemInstruction = [
+      buildSummarySystemPrompt(note.category),
+      buildSummaryDeveloperPrompt(note.title, note.category),
+    ].join("\n\n");
+    const userPrompt = buildSummaryUserPrompt(note, recentMessages);
+
     const content = await generateGeminiText({
-      systemInstruction: [
-        buildSummarySystemPrompt(note.category),
-        buildSummaryDeveloperPrompt(note.title, note.category),
-      ].join("\n\n"),
-      prompt: buildSummaryUserPrompt(note, recentMessages),
+      systemInstruction,
+      prompt: userPrompt,
       temperature: 0.4,
       maxOutputTokens: 900,
     });
 
     const summary = normalizeSummary(JSON.parse(extractJsonObject(content)));
+
+    void logAiCall({
+      promptType: "summary",
+      noteId: note.id,
+      inputSystem: systemInstruction,
+      inputUser: userPrompt,
+      output: content,
+      metadata: { noteTitle: note.title, category: note.category },
+    }).catch(() => {});
 
     return NextResponse.json(summary);
   } catch (error) {

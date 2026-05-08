@@ -7,6 +7,7 @@ import {
   getInitialQuestion,
 } from "@/lib/ai/prompts";
 import { ChatRequestBody } from "@/lib/ai/types";
+import { logAiCall } from "@/lib/server/aiLogger";
 
 const FALLBACK_MESSAGE = "지금은 AI가 잠시 쉬고 있어요. 다시 시도해주세요.";
 const MAX_CONTEXT_MESSAGES = 10;
@@ -56,15 +57,27 @@ export async function POST(request: Request) {
       ...debugContext,
       recentMessages,
     };
+    const systemInstruction = [
+      buildChatSystemPrompt(note.category),
+      buildChatDeveloperPrompt(note.title, note.category, recentMessages),
+    ].join("\n\n");
+    const userPrompt = buildChatUserPrompt(note, recentMessages);
+
     const message = await generateGeminiText({
-      systemInstruction: [
-        buildChatSystemPrompt(note.category),
-        buildChatDeveloperPrompt(note.title, note.category, recentMessages),
-      ].join("\n\n"),
-      prompt: buildChatUserPrompt(note, recentMessages),
+      systemInstruction,
+      prompt: userPrompt,
       temperature: 0.8,
       maxOutputTokens: 420,
     });
+
+    void logAiCall({
+      promptType: "chat",
+      noteId: note.id,
+      inputSystem: systemInstruction,
+      inputUser: userPrompt,
+      output: message,
+      metadata: { noteTitle: note.title, category: note.category, messageCount: recentMessages.length },
+    }).catch(() => {});
 
     return NextResponse.json({ message });
   } catch (error) {

@@ -4,6 +4,7 @@ import {
   buildTraditionalCultureSystemPrompt,
   buildTraditionalCultureUserPrompt,
 } from "@/lib/ai/traditionalCulturePrompt";
+import { logAiCall } from "@/lib/server/aiLogger";
 
 type TraditionalCultureResult = {
   score: number;
@@ -28,9 +29,12 @@ export async function analyzeTraditionalCulture(
     content: r.content as string,
   }));
 
+  const systemInstruction = buildTraditionalCultureSystemPrompt();
+  const userPrompt = buildTraditionalCultureUserPrompt(noteTitle, messages);
+
   const text = await generateGeminiText({
-    systemInstruction: buildTraditionalCultureSystemPrompt(),
-    prompt: buildTraditionalCultureUserPrompt(noteTitle, messages),
+    systemInstruction,
+    prompt: userPrompt,
     temperature: 0.3,
     maxOutputTokens: 400,
   });
@@ -51,4 +55,13 @@ export async function analyzeTraditionalCulture(
         traditional_culture_memo  = ${memo}
     WHERE id = ${noteId}
   `;
+
+  void logAiCall({
+    promptType: "traditional_culture",
+    noteId,
+    inputSystem: systemInstruction,
+    inputUser: userPrompt,
+    output: text,
+    metadata: { noteTitle, messageCount: messages.length, score, memo },
+  }).catch(() => {});
 }

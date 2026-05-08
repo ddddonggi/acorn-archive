@@ -6,6 +6,7 @@ import {
 } from "@/lib/ai/categoryTastePrompt";
 import type { RecSummaryInput } from "@/lib/ai/recommendationPrompt";
 import type { NoteCategory } from "@/lib/notes";
+import { logAiCall } from "@/lib/server/aiLogger";
 
 export async function regenerateCategoryTaste(
   username: string,
@@ -29,14 +30,26 @@ export async function regenerateCategoryTaste(
     emotionTags: Array.isArray(r.emotion_tags) ? r.emotion_tags : [],
   }));
 
+  const systemInstruction = buildCategoryTasteSystemPrompt(category);
+  const userPrompt = buildCategoryTasteUserPrompt(category, summaries);
+
   const text = await generateGeminiText({
-    systemInstruction: buildCategoryTasteSystemPrompt(category),
-    prompt: buildCategoryTasteUserPrompt(category, summaries),
+    systemInstruction,
+    prompt: userPrompt,
     temperature: 0.5,
     maxOutputTokens: 200,
   });
 
   if (!text.trim()) return;
+
+  void logAiCall({
+    promptType: "category_taste",
+    userId: username,
+    inputSystem: systemInstruction,
+    inputUser: userPrompt,
+    output: text,
+    metadata: { category, summaryCount: summaries.length },
+  }).catch(() => {});
 
   const now = new Date().toISOString();
   await sql`
