@@ -47,6 +47,19 @@ export function getNotesByCategory(category: NoteCategory) {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
+export function getNoteById(noteId: string) {
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  return (
+    getNotes().find((note) => note.id === noteId && note.userId === currentUser.username) ??
+    null
+  );
+}
+
 export function createNote(category: NoteCategory, title: string) {
   const currentUser = getCurrentUser();
 
