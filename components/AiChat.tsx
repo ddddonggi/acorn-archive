@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { appendMessages, ChatMessage, getMessagesByNoteId } from "@/lib/chat";
-import { generateMockAiResponse } from "@/lib/mockAi";
+import { ChatResponseBody } from "@/lib/ai/types";
 import { getNoteById, StoredNote } from "@/lib/notes";
 
 type AiChatProps = {
@@ -18,14 +18,16 @@ const categoryLabels = {
   video: "영상",
 } as const;
 
-const firstQuestion = "이 작품을 보고 가장 먼저 든 생각은 뭐였나요?";
+const fallbackMessage = "지금은 AI가 잠시 쉬고 있어요. 다시 시도해주세요.";
 
 export default function AiChat({ noteId }: AiChatProps) {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const didRequestInitialQuestion = useRef(false);
   const [note, setNote] = useState<StoredNote | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!getCurrentUser()) {
@@ -33,9 +35,21 @@ export default function AiChat({ noteId }: AiChatProps) {
       return;
     }
 
-    setNote(getNoteById(noteId));
-    setMessages(getMessagesByNoteId(noteId));
+    const nextNote = getNoteById(noteId);
+    const savedMessages = getMessagesByNoteId(noteId);
+
+    setNote(nextNote);
+    setMessages(savedMessages);
   }, [noteId, router]);
+
+  useEffect(() => {
+    if (!note || messages.length > 0 || didRequestInitialQuestion.current) {
+      return;
+    }
+
+    didRequestInitialQuestion.current = true;
+    void requestAssistantMessage([]);
+  }, [note, messages.length]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -44,39 +58,58 @@ export default function AiChat({ noteId }: AiChatProps) {
     });
   }, [messages]);
 
-  const visibleMessages = useMemo(() => {
-    if (messages.length > 0) {
-      return messages;
+  async function requestAssistantMessage(nextMessages: Pick<ChatMessage, "role" | "content">[]) {
+    if (!note) {
+      return;
     }
 
-    return [
-      {
-        id: "welcome",
-        noteId,
-        userId: "system",
-        role: "assistant" as const,
-        content: firstQuestion,
-        createdAt: new Date(0).toISOString(),
-      },
-    ];
-  }, [messages, noteId]);
+    setIsLoading(true);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          note: {
+            id: note.id,
+            title: note.title,
+            category: note.category,
+          },
+          messages: nextMessages.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+        }),
+      });
+      const data = (await response.json()) as ChatResponseBody;
+      const assistantMessage = data.message || fallbackMessage;
+      appendMessages(noteId, [{ role: "assistant", content: assistantMessage }]);
+      setMessages(getMessagesByNoteId(noteId));
+    } catch {
+      appendMessages(noteId, [{ role: "assistant", content: fallbackMessage }]);
+      setMessages(getMessagesByNoteId(noteId));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const content = input.trim();
 
-    if (!content) {
+    if (!content || !note || isLoading) {
       return;
     }
 
-    const aiContent = generateMockAiResponse(content, note);
-    appendMessages(noteId, [
-      { role: "user", content },
-      { role: "assistant", content: aiContent },
-    ]);
-    setMessages(getMessagesByNoteId(noteId));
+    const userMessages = appendMessages(noteId, [{ role: "user", content }]);
+    const nextMessages = [...messages, ...userMessages];
+
+    setMessages(nextMessages);
     setInput("");
+    await requestAssistantMessage(nextMessages);
   }
 
   return (
@@ -100,14 +133,14 @@ export default function AiChat({ noteId }: AiChatProps) {
             </span>
           </div>
           <p className="mt-4 text-sm font-semibold text-[#8a5a2f]">
-            AI는 답을 대신 쓰기보다, 내 생각을 조금 더 잘 들여다보게 도와줘요.
+            AI는 감상문을 대신 쓰지 않고, 네 생각을 더 잘 꺼낼 수 있게 질문해요.
           </p>
 
           <div
             ref={scrollRef}
             className="mt-8 flex-1 space-y-4 overflow-y-auto rounded-[22px] bg-[#f4e5c9]/70 p-4"
           >
-            {visibleMessages.map((message) => {
+            {messages.map((message) => {
               const isUser = message.role === "user";
 
               return (
@@ -127,6 +160,13 @@ export default function AiChat({ noteId }: AiChatProps) {
                 </div>
               );
             })}
+            {isLoading ? (
+              <div className="flex justify-start">
+                <div className="rounded-[22px] bg-[#fff8eb] p-4 text-[#5b351f] shadow-sm">
+                  생각을 고르는 중이에요...
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <form className="mt-5 flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
@@ -134,13 +174,15 @@ export default function AiChat({ noteId }: AiChatProps) {
               className="min-w-0 flex-1 rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 outline-none"
               placeholder="답변을 입력해 주세요"
               value={input}
+              disabled={isLoading}
               onChange={(event) => setInput(event.target.value)}
             />
             <button
               type="submit"
-              className="rounded-2xl bg-[#8a5a2f] px-5 py-3 font-bold text-[#fff8eb]"
+              disabled={isLoading || !input.trim()}
+              className="rounded-2xl bg-[#8a5a2f] px-5 py-3 font-bold text-[#fff8eb] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              전송
+              {isLoading ? "대기" : "전송"}
             </button>
           </form>
         </div>
