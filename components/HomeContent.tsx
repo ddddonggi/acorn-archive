@@ -19,43 +19,53 @@ const cards: Card[] = [
     href: "/video",
     title: "영상",
     description: "작은 TV 앞에서 떠오른 마음을 기록해요.",
-    style: { top: "39%", left: "31%" },
+    style: { top: "39%", left: "31%", width: "16.0%" },
     tailDir: "up-right",
   },
   {
     href: "/media",
     title: "미디어",
     description: "책장 한 칸에 생각의 조각을 꽂아둬요.",
-    style: { top: "62%", left: "32%" },
+    style: { top: "62%", left: "32%", width: "15.0%" },
     tailDir: "down-right",
   },
   {
     href: "/taste",
     title: "내 취향",
     description: "쌓인 감상으로 취향을 발견해요.",
-    style: { top: "5%", left: "47%" },
+    style: { top: "5%", left: "47%", width: "13.0%" },
     tailDir: "up",
   },
   {
     href: "/music",
     title: "음악",
     description: "LP판처럼 오래 맴도는 감상을 남겨요.",
-    style: { top: "67%", right: "7%" },
+    style: { top: "67%", right: "7%", width: "15.0%" },
     tailDir: "down-left",
   },
 ];
+
+const BUBBLE_LABELS: Record<string, string> = {
+  "/video": "영상",
+  "/media": "미디어",
+  "/taste": "내 취향",
+  "/music": "음악",
+  memo: "창고 메모",
+};
 
 function Bubble({
   children,
   style,
   tailDir = "down",
   noTail = false,
+  minHeight,
   onClick,
 }: {
   children: React.ReactNode;
   style: React.CSSProperties;
   tailDir?: TailDir;
   noTail?: boolean;
+  minHeight?: number;
   onClick: () => void;
 }) {
   const isUp = tailDir.startsWith("up");
@@ -73,12 +83,13 @@ function Bubble({
       style={style}
       className="absolute cursor-pointer text-left transition duration-200 hover:-translate-y-1 hover:scale-[1.02]"
     >
-      {/* 말풍선 본체 */}
-      <div className="relative rounded-2xl border border-white/50 bg-white/68 px-5 py-3 shadow-lg backdrop-blur-md">
+      <div
+        className="relative rounded-2xl border border-white/50 bg-white/68 px-5 py-3 shadow-lg backdrop-blur-md"
+        style={minHeight ? { minHeight: `${minHeight}vh` } : undefined}
+      >
         {children}
         {!noTail && (
           <>
-            {/* 말풍선 꼬리 */}
             <span
               className="pointer-events-none absolute"
               style={{
@@ -94,7 +105,6 @@ function Bubble({
                   : { borderTop: "12px solid rgba(255,255,255,0.68)" }),
               }}
             />
-            {/* 꼬리 테두리 (살짝 안쪽) */}
             <span
               className="pointer-events-none absolute"
               style={{
@@ -117,73 +127,85 @@ function Bubble({
   );
 }
 
-const CARD_KEYS = cards.map((c) => c.href);
-const DEFAULT_WIDTHS: Record<string, number> = Object.fromEntries(
-  CARD_KEYS.map((k) => [k, 13])
-);
-DEFAULT_WIDTHS["memo"] = 22.5;
+const DEFAULT_HEIGHTS: Record<string, number> = {
+  "/video": 0,
+  "/media": 0,
+  "/taste": 0,
+  "/music": 0,
+  memo: 0,
+};
 
-function SizePanel({
-  widths,
+function HeightSidebar({
+  heights,
   onChange,
   onClose,
 }: {
-  widths: Record<string, number>;
+  heights: Record<string, number>;
   onChange: (key: string, val: number) => void;
   onClose: () => void;
 }) {
-  const labels: Record<string, string> = {
-    "/video": "영상",
-    "/media": "미디어",
-    "/taste": "내 취향",
-    "/music": "음악",
-    memo: "창고 메모",
-  };
-
   return (
-    <div className="absolute bottom-4 right-4 z-50 w-56 rounded-2xl border border-white/50 bg-white/85 p-3 shadow-xl backdrop-blur-md">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-[11px] font-bold text-[#3f2a1d]">버블 너비 조절</span>
+    <div className="absolute right-0 top-0 z-50 flex h-full w-56 flex-col border-l border-white/40 bg-white/95 shadow-2xl backdrop-blur-md">
+      <div className="flex items-center justify-between border-b border-[#e8ddd4] px-4 py-3">
+        <span className="text-xs font-bold text-[#3f2a1d]">말풍선 높이 조절</span>
         <button
           type="button"
           onClick={onClose}
-          className="text-[11px] text-[#6b4b35] hover:text-[#3f2a1d]"
+          className="text-sm leading-none text-[#6b4b35] hover:text-[#3f2a1d]"
         >
-          닫기
+          ✕
         </button>
       </div>
-      {[...CARD_KEYS, "memo"].map((key) => (
-        <div key={key} className="mb-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-[#6b4b35]">{labels[key]}</span>
-            <span className="font-mono text-[10px] text-[#3f2a1d]">{widths[key].toFixed(1)}%</span>
-          </div>
-          <input
-            type="range"
-            min={6}
-            max={35}
-            step={0.5}
-            value={widths[key]}
-            onChange={(e) => onChange(key, Number(e.target.value))}
-            className="mt-0.5 w-full accent-[#697a4c]"
-          />
-        </div>
-      ))}
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+        {Object.entries(BUBBLE_LABELS).map(([key, label]) => {
+          const val = heights[key];
+          return (
+            <div key={key}>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[#3f2a1d]">{label}</span>
+                <span className="rounded bg-[#f5efe8] px-1.5 py-0.5 font-mono text-[10px] text-[#6b4b35]">
+                  {val === 0 ? "auto" : `${val}vh`}
+                </span>
+              </div>
+              {/* 높이 시각 바 */}
+              <div className="mb-1.5 flex h-3 w-full overflow-hidden rounded-full bg-[#e8ddd4]">
+                <div
+                  className="rounded-full bg-[#697a4c] transition-all"
+                  style={{ width: val === 0 ? "4px" : `${(val / 20) * 100}%` }}
+                />
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={val}
+                onChange={(e) => onChange(key, Number(e.target.value))}
+                className="w-full accent-[#697a4c]"
+              />
+              <div className="mt-0.5 flex justify-between text-[9px] text-[#a08060]">
+                <span>auto</span>
+                <span>20%</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 export default function HomeContent() {
   const router = useRouter();
-  const [widths, setWidths] = useState(DEFAULT_WIDTHS);
-  const [showPanel, setShowPanel] = useState(false);
+  const [heights, setHeights] = useState(DEFAULT_HEIGHTS);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   function go(href: string) {
     router.push(isLoggedIn() ? href : "/login");
   }
 
-  function setWidth(key: string, val: number) {
-    setWidths((prev) => ({ ...prev, [key]: val }));
+  function setHeight(key: string, val: number) {
+    setHeights((prev) => ({ ...prev, [key]: val }));
   }
 
   return (
@@ -203,8 +225,9 @@ export default function HomeContent() {
         {cards.map((card) => (
           <Bubble
             key={card.href}
-            style={{ ...card.style, width: `${widths[card.href]}%` }}
+            style={card.style}
             noTail
+            minHeight={heights[card.href] || undefined}
             onClick={() => go(card.href)}
           >
             <p className="text-[1.1vw] font-black leading-tight text-[#3f2a1d]">
@@ -218,8 +241,9 @@ export default function HomeContent() {
 
         {/* 오늘의 창고 메모 말풍선 */}
         <Bubble
-          style={{ top: "20%", left: "64%", width: `${widths["memo"]}%` }}
-          tailDir="down"
+          style={{ top: "5%", left: "64%", width: "32.5%" }}
+          tailDir="down-left"
+          minHeight={30 || undefined}
           onClick={() => go("/taste")}
         >
           <p className="flex items-center gap-1 text-[0.75vw] font-semibold text-[#697a4c]">
@@ -230,22 +254,21 @@ export default function HomeContent() {
           </p>
         </Bubble>
 
-        {/* 크기 조절 토글 버튼 */}
-        {!showPanel && (
-          <button
-            type="button"
-            onClick={() => setShowPanel(true)}
-            className="absolute bottom-4 right-4 z-50 rounded-full border border-white/50 bg-white/80 px-3 py-1 text-[11px] font-semibold text-[#3f2a1d] shadow backdrop-blur-sm hover:bg-white"
-          >
-            크기 조절
-          </button>
-        )}
+        {/* 높이 조절 사이드바 토글 탭 */}
+        <button
+          type="button"
+          onClick={() => setShowSidebar((v) => !v)}
+          className="absolute right-0 top-1/2 z-50 -translate-y-1/2 rounded-l-lg border border-r-0 border-white/40 bg-white/80 px-1.5 py-3 text-[10px] font-bold text-[#3f2a1d] shadow backdrop-blur-sm hover:bg-white"
+          style={{ writingMode: "vertical-rl" }}
+        >
+          높이 조절
+        </button>
 
-        {showPanel && (
-          <SizePanel
-            widths={widths}
-            onChange={setWidth}
-            onClose={() => setShowPanel(false)}
+        {showSidebar && (
+          <HeightSidebar
+            heights={heights}
+            onChange={setHeight}
+            onClose={() => setShowSidebar(false)}
           />
         )}
       </div>

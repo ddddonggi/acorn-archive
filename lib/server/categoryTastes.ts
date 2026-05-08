@@ -1,0 +1,49 @@
+import { sql } from "@/lib/server/db";
+import { generateGeminiText } from "@/lib/ai/gemini";
+import {
+  buildCategoryTasteSystemPrompt,
+  buildCategoryTasteUserPrompt,
+} from "@/lib/ai/categoryTastePrompt";
+import type { RecSummaryInput } from "@/lib/ai/recommendationPrompt";
+import type { NoteCategory } from "@/lib/notes";
+
+export async function regenerateCategoryTaste(
+  username: string,
+  category: NoteCategory,
+): Promise<void> {
+  const result = await sql`
+    SELECT s.summary_title, s.artist, s.one_line_review, s.taste_hint, s.emotion_tags
+    FROM acorn_summaries s
+    JOIN acorn_notes n ON s.note_id = n.id
+    WHERE s.user_id = ${username} AND n.category = ${category}
+    ORDER BY s.updated_at DESC
+  `;
+
+  if (result.rows.length === 0) return;
+
+  const summaries: RecSummaryInput[] = result.rows.map((r) => ({
+    summaryTitle: r.summary_title,
+    artist: r.artist ?? "",
+    oneLineReview: r.one_line_review,
+    tasteHint: r.taste_hint,
+    emotionTags: Array.isArray(r.emotion_tags) ? r.emotion_tags : [],
+  }));
+
+  const text = await generateGeminiText({
+    systemInstruction: buildCategoryTasteSystemPrompt(category),
+    prompt: buildCategoryTasteUserPrompt(category, summaries),
+    temperature: 0.5,
+    maxOutputTokens: 200,
+  });
+
+  if (!text.trim()) return;
+
+  const now = new Date().toISOString();
+  await sql`
+    INSERT INTO acorn_category_tastes (user_id, category, taste_text, updated_at)
+    VALUES (${username}, ${category}, ${text.trim()}, ${now})
+    ON CONFLICT (user_id, category) DO UPDATE SET
+      taste_text = EXCLUDED.taste_text,
+      updated_at = EXCLUDED.updated_at
+  `;
+}

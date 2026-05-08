@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { GeneratedSummary, StoredSummary } from "@/lib/summary";
 import { sql, ensureDatabase, normalizeDate } from "@/lib/server/db";
 import { regenerateFullRec } from "@/lib/server/recommendations";
+import { regenerateCategoryTaste } from "@/lib/server/categoryTastes";
 import type { NoteCategory } from "@/lib/notes";
 
 export async function GET(request: Request) {
@@ -96,6 +97,9 @@ export async function POST(request: Request) {
 
     const noteCategory = noteResult.rows[0]?.category as NoteCategory | undefined;
     if (noteCategory) {
+      // Category taste: await so client sees fresh text on next fetch
+      await regenerateCategoryTaste(username, noteCategory).catch(() => {});
+      // Full recs: fire-and-forget (uses all summaries, heavier)
       void regenerateFullRec(username, noteCategory).catch(() => {});
     }
 

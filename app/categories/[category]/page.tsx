@@ -5,19 +5,19 @@ import { NoteCategory } from "@/lib/notes";
 const categoryMap = {
   music: {
     label: "음악",
-    prompt: "어떤 음악을 들었나요?",
+    prompt: "",
     mood: "LP판 위에 마음을 올려두는 곳",
     placeholder: "어떤 음악을 들었나요?",
   },
   media: {
     label: "미디어",
-    prompt: "어떤 책이나 콘텐츠를 봤나요?",
+    prompt: "",
     mood: "책장 사이에 감상을 끼워두는 곳",
     placeholder: "어떤 책이나 콘텐츠를 봤나요?",
   },
   video: {
     label: "영상",
-    prompt: "어떤 영화나 영상을 봤나요?",
+    prompt: "",
     mood: "작은 화면에서 오래 남은 장면을 꺼내는 곳",
     placeholder: "어떤 영화나 영상을 봤나요?",
   },

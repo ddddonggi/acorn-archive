@@ -6,7 +6,7 @@ export default function MusicPage() {
       categoryKey="music"
       category={{
         label: "음악",
-        prompt: "어떤 음악을 들었나요?",
+        prompt: "",
         mood: "LP판 위에 마음을 올려두는 곳",
         placeholder: "어떤 음악을 들었나요?",
       }}

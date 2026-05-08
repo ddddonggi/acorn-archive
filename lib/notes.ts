@@ -13,6 +13,7 @@ export type StoredNote = {
   category: NoteCategory;
   title: string;
   artist: string;
+  color: string;
   imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
@@ -49,7 +50,7 @@ export async function getNoteById(noteId: string) {
   return data.note ?? null;
 }
 
-export async function createNote(category: NoteCategory, title: string, artist: string = "") {
+export async function createNote(category: NoteCategory, title: string, artist: string = "", color: string = "") {
   const currentUser = getCurrentUser();
 
   if (!currentUser) {
@@ -64,6 +65,7 @@ export async function createNote(category: NoteCategory, title: string, artist: 
       category,
       title: title.trim(),
       artist: artist.trim(),
+      color,
     }),
   });
   const data = (await response.json()) as { note?: StoredNote | null };

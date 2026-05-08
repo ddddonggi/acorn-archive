@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     await ensureDatabase();
 
     const result = await sql`
-      SELECT id, user_id, category, title, artist, image_url, created_at, updated_at
+      SELECT id, user_id, category, title, artist, color, image_url, created_at, updated_at
       FROM acorn_notes
       WHERE user_id = ${username} AND category = ${category}
       ORDER BY created_at DESC
@@ -37,10 +37,12 @@ export async function POST(request: Request) {
       category?: NoteCategory;
       title?: string;
       artist?: string;
+      color?: string;
     };
     const username = body.username?.trim();
     const title = body.title?.trim();
     const artist = body.artist?.trim() ?? "";
+    const color = body.color ?? "";
     const category = body.category;
 
     if (!username || !title || !isValidCategory(category)) {
@@ -53,9 +55,9 @@ export async function POST(request: Request) {
     const id = `${category}-${Date.now()}`;
 
     const result = await sql`
-      INSERT INTO acorn_notes (id, user_id, category, title, artist, created_at, updated_at)
-      VALUES (${id}, ${username}, ${category}, ${title}, ${artist}, ${now}, ${now})
-      RETURNING id, user_id, category, title, artist, image_url, created_at, updated_at
+      INSERT INTO acorn_notes (id, user_id, category, title, artist, color, created_at, updated_at)
+      VALUES (${id}, ${username}, ${category}, ${title}, ${artist}, ${color}, ${now}, ${now})
+      RETURNING id, user_id, category, title, artist, color, image_url, created_at, updated_at
     `;
 
     return NextResponse.json({ note: mapNoteRow(result.rows[0]) });
@@ -78,6 +80,7 @@ function mapNoteRow(row: any): StoredNote {
     category: row.category,
     title: row.title,
     artist: row.artist ?? "",
+    color: row.color ?? "",
     imageUrl: row.image_url ?? null,
     createdAt: normalizeDate(row.created_at),
     updatedAt: normalizeDate(row.updated_at),

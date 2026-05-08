@@ -48,6 +48,7 @@ export default function TasteProfile() {
   const [fullRecs, setFullRecs] = useState<AiRec[]>([]);
   const [isLoadingRecentRecs, setIsLoadingRecentRecs] = useState(false);
   const [recentRecsLoaded, setRecentRecsLoaded] = useState(false);
+  const [categoryTasteTexts, setCategoryTasteTexts] = useState<Partial<Record<NoteCategory, string>>>({});
 
   useEffect(() => {
     if (!getCurrentUser()) {
@@ -61,12 +62,35 @@ export default function TasteProfile() {
       setIsLoading(false);
     }
 
-    void refreshProfile();
-    window.addEventListener("acorn-summary-changed", refreshProfile);
+    async function refreshAll() {
+      await refreshProfile();
+      void loadCategoryTastes();
+    }
+
+    void refreshAll();
+    window.addEventListener("acorn-summary-changed", refreshAll);
     return () => {
-      window.removeEventListener("acorn-summary-changed", refreshProfile);
+      window.removeEventListener("acorn-summary-changed", refreshAll);
     };
-  }, [router]);
+  }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadCategoryTastes() {
+    const user = getCurrentUser();
+    if (!user) return;
+    try {
+      const resp = await fetch(
+        `/api/category-tastes?username=${encodeURIComponent(user.username)}`,
+      );
+      const data = (await resp.json()) as { tastes?: { category: NoteCategory; tasteText: string }[] };
+      const map: Partial<Record<NoteCategory, string>> = {};
+      for (const item of data.tastes ?? []) {
+        map[item.category] = item.tasteText;
+      }
+      setCategoryTasteTexts(map);
+    } catch {
+      // leave existing state
+    }
+  }
 
   useEffect(() => {
     if (!showRec) return;
@@ -229,36 +253,40 @@ export default function TasteProfile() {
     <main className="page-shell flex flex-col">
       <section className="mx-auto w-full max-w-6xl flex-1 flex flex-col py-6">
         <div className="warm-panel relative flex flex-1 flex-col rounded-[28px] p-7 md:p-10">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">
+          <p className="text-2xl font-bold text-[#5b351f]">
             내 종합 취향 리포트
           </p>
 
           {/* 카테고리별 감상 수 + 총 개수 뱃지 */}
-          <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_auto]">
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
             <div className="space-y-4 self-center">
               {profile.categoryStats.map((cs) => (
                 <CategoryBar key={cs.category} stats={cs} max={maxCategoryCount} />
               ))}
             </div>
-            <div className="flex flex-col items-center justify-center rounded-[22px] bg-[#5b351f] px-8 py-6 text-[#fff8eb]">
+            <div className="flex flex-col items-start justify-center rounded-[22px] bg-[#5b351f] px-8 py-6 text-[#fff8eb]">
               <p className="text-xs font-bold text-[#ead7b8]">작성한 감상문</p>
               <p className="mt-2 text-5xl font-black">{profile.summaries.length}</p>
-              <p className="mt-1 text-sm text-[#ead7b8]">총 {profile.summaries.length}개</p>
+              <p className="mt-1 text-sm text-[#ead7b8]">지금까지 작성한 감상문의 개수예요</p>
             </div>
           </div>
 
-          {/* 종합 */}
-          <section className="mt-5 rounded-[22px] bg-[#fff8eb] p-6">
-            <p className="text-sm font-bold text-[#697a4c]">종합</p>
-            <p className="mt-3 text-lg leading-8 text-[#3f2a1d]">{profile.oneLineSummary}</p>
+          {/* 나의 문화 감상 성향 */}
+          <section className="mt-5">
+            <p className="mb-3 text-base font-bold text-[#5b351f]">나의 문화 감상 성향</p>
+            <p className="text-lg leading-8 text-[#3f2a1d]">{profile.oneLineSummary}</p>
           </section>
 
           {/* 카테고리별 취향 */}
           <section className="mt-5">
-            <p className="mb-4 text-sm font-bold text-[#697a4c]">카테고리별 취향</p>
+            <p className="mb-4 text-base font-bold text-[#5b351f]">카테고리별 취향</p>
             <div className="grid gap-4 sm:grid-cols-3">
               {profile.categoryStats.map((cs) => (
-                <CategoryTasteBox key={cs.category} stats={cs} />
+                <CategoryTasteBox
+                  key={cs.category}
+                  stats={cs}
+                  tasteText={categoryTasteTexts[cs.category]}
+                />
               ))}
             </div>
           </section>
@@ -279,60 +307,46 @@ export default function TasteProfile() {
 }
 
 function CategoryBar({ stats, max }: { stats: CategoryStats; max: number }) {
-  const color = categoryColors[stats.category];
   const pct = stats.count === 0 ? 0 : Math.max(8, (stats.count / max) * 100);
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="w-14 shrink-0 text-sm font-bold" style={{ color }}>
-        {categoryLabels[stats.category]}
-      </span>
-      <div className="flex-1">
-        <div className="h-3 overflow-hidden rounded-full bg-[#ead7b8]">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${pct}%`, backgroundColor: color }}
-          />
-        </div>
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-sm font-bold text-[#5b351f]">
+          {categoryLabels[stats.category]}
+        </span>
+        <span className="text-sm font-bold text-[#5b351f]">
+          {stats.count}권
+        </span>
       </div>
-      <span className="w-8 shrink-0 text-right text-sm font-bold text-[#5b351f]">
-        {stats.count}
-      </span>
+      <div className="h-3 overflow-hidden rounded-full bg-[#ead7b8]">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, backgroundColor: "#697a4c" }}
+        />
+      </div>
     </div>
   );
 }
 
-function CategoryTasteBox({ stats }: { stats: CategoryStats }) {
-  const color = categoryColors[stats.category];
-  const hasData = stats.count > 0;
-
+function CategoryTasteBox({
+  stats,
+  tasteText,
+}: {
+  stats: CategoryStats;
+  tasteText?: string;
+}) {
   return (
-    <div className="rounded-[18px] bg-[#fff8eb] p-5">
-      <p className="text-sm font-black" style={{ color }}>
+    <div className="rounded-[18px] bg-[#f5e8d3] p-5">
+      <p className="text-sm font-black text-[#697a4c]">
         {categoryLabels[stats.category]}
       </p>
-      {hasData ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {stats.topEmotionTags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full px-3 py-1 text-xs font-bold text-[#fff8eb]"
-              style={{ backgroundColor: color }}
-            >
-              {tag}
-            </span>
-          ))}
-          {stats.topKeywords.map((kw) => (
-            <span
-              key={kw}
-              className="rounded-full border border-[#ead7b8] px-3 py-1 text-xs font-bold text-[#5b351f]"
-            >
-              {kw}
-            </span>
-          ))}
-        </div>
-      ) : (
+      {stats.count === 0 ? (
         <p className="mt-3 text-xs text-[#b5a090]">아직 감상이 없어요</p>
+      ) : tasteText ? (
+        <p className="mt-3 text-sm leading-6 text-[#3f2a1d]">{tasteText}</p>
+      ) : (
+        <p className="mt-3 text-xs text-[#b5a090]">분석 중이에요…</p>
       )}
     </div>
   );
