@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
     if (noteId) {
       const result = await sql`
-        SELECT id, note_id, user_id, summary_title, one_line_review, essay,
+        SELECT id, note_id, user_id, summary_title, artist, one_line_review, essay,
                emotion_tags, keywords, taste_hint, created_at, updated_at
         FROM acorn_summaries
         WHERE user_id = ${username} AND note_id = ${noteId}
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     }
 
     const result = await sql`
-      SELECT id, note_id, user_id, summary_title, one_line_review, essay,
+      SELECT id, note_id, user_id, summary_title, artist, one_line_review, essay,
              emotion_tags, keywords, taste_hint, created_at, updated_at
       FROM acorn_summaries
       WHERE user_id = ${username}
@@ -64,23 +64,24 @@ export async function POST(request: Request) {
     const id = `summary-${noteId}`;
     const result = await sql`
       INSERT INTO acorn_summaries (
-        id, note_id, user_id, summary_title, one_line_review, essay,
+        id, note_id, user_id, summary_title, artist, one_line_review, essay,
         emotion_tags, keywords, taste_hint, created_at, updated_at
       )
       VALUES (
-        ${id}, ${noteId}, ${username}, ${summary.summaryTitle}, ${summary.oneLineReview},
-        ${summary.essay}, ${JSON.stringify(summary.emotionTags)}::jsonb,
+        ${id}, ${noteId}, ${username}, ${summary.summaryTitle}, ${summary.artist ?? ""},
+        ${summary.oneLineReview}, ${summary.essay}, ${JSON.stringify(summary.emotionTags)}::jsonb,
         ${JSON.stringify(summary.keywords)}::jsonb, ${summary.tasteHint}, ${now}, ${now}
       )
       ON CONFLICT (note_id) DO UPDATE SET
         summary_title = EXCLUDED.summary_title,
+        artist = EXCLUDED.artist,
         one_line_review = EXCLUDED.one_line_review,
         essay = EXCLUDED.essay,
         emotion_tags = EXCLUDED.emotion_tags,
         keywords = EXCLUDED.keywords,
         taste_hint = EXCLUDED.taste_hint,
         updated_at = EXCLUDED.updated_at
-      RETURNING id, note_id, user_id, summary_title, one_line_review, essay,
+      RETURNING id, note_id, user_id, summary_title, artist, one_line_review, essay,
                 emotion_tags, keywords, taste_hint, created_at, updated_at
     `;
 
@@ -105,6 +106,7 @@ function mapSummaryRow(row: any): StoredSummary {
     noteId: row.note_id,
     userId: row.user_id,
     summaryTitle: row.summary_title,
+    artist: row.artist ?? "",
     oneLineReview: row.one_line_review,
     essay: row.essay,
     emotionTags: Array.isArray(row.emotion_tags) ? row.emotion_tags : [],

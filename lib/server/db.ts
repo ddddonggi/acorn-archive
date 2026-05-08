@@ -39,6 +39,7 @@ export async function ensureDatabase() {
       note_id TEXT NOT NULL UNIQUE REFERENCES acorn_notes(id) ON DELETE CASCADE,
       user_id TEXT NOT NULL REFERENCES acorn_users(username) ON DELETE CASCADE,
       summary_title TEXT NOT NULL,
+      artist TEXT NOT NULL DEFAULT '',
       one_line_review TEXT NOT NULL,
       essay TEXT NOT NULL,
       emotion_tags JSONB NOT NULL,
@@ -47,6 +48,10 @@ export async function ensureDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  await sql`
+    ALTER TABLE acorn_summaries ADD COLUMN IF NOT EXISTS artist TEXT NOT NULL DEFAULT ''
   `;
 }
 

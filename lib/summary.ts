@@ -4,6 +4,7 @@ import { NoteCategory } from "@/lib/notes";
 
 export type GeneratedSummary = {
   summaryTitle: string;
+  artist: string;
   oneLineReview: string;
   essay: string;
   emotionTags: string[];
@@ -67,6 +68,7 @@ export function generateSummaryFromMessages({
   if (userTexts.length === 0) {
     return {
       summaryTitle: `${noteTitle} 감상 기록`,
+      artist: "",
       oneLineReview: "아직 대화가 충분하지 않아 감상을 더 기다리고 있어요.",
       essay: `${categoryLabel} "${noteTitle}"에 대한 대화가 아직 충분히 쌓이지 않았습니다.\n\n지금은 작품을 보고 처음 떠오른 감정과 생각을 기록하기 전 단계입니다.\n\n조금 더 이야기하면 감상문을 자연스럽게 정리할 수 있습니다.`,
       emotionTags: ["기록", "감상", "시작"],
@@ -77,6 +79,7 @@ export function generateSummaryFromMessages({
 
   return {
     summaryTitle: `${noteTitle} 감상문`,
+    artist: "",
     oneLineReview: `${noteTitle}은 나에게 오래 남은 감상으로 기록되었습니다.`,
     essay: userTexts.slice(0, 3).join("\n\n").slice(0, 500),
     emotionTags: ["감상", "기억", "생각"],

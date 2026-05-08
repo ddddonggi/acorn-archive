@@ -8,6 +8,7 @@ import { ChatResponseBody } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/auth";
 import { appendMessages, ChatMessage, getMessagesByNoteId } from "@/lib/chat";
 import { getNoteById, StoredNote } from "@/lib/notes";
+import { getSummaryByNoteId, StoredSummary } from "@/lib/summary";
 
 type AiChatProps = {
   noteId: string;
@@ -30,6 +31,7 @@ export default function AiChat({ noteId }: AiChatProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const didRequestInitialQuestion = useRef(false);
   const [note, setNote] = useState<StoredNote | null>(null);
+  const [savedSummary, setSavedSummary] = useState<StoredSummary | null | undefined>(undefined);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -42,10 +44,14 @@ export default function AiChat({ noteId }: AiChatProps) {
     }
 
     async function loadChat() {
-      const nextNote = await getNoteById(noteId);
-      const savedMessages = await getMessagesByNoteId(noteId);
+      const [nextNote, summary, savedMessages] = await Promise.all([
+        getNoteById(noteId),
+        getSummaryByNoteId(noteId),
+        getMessagesByNoteId(noteId),
+      ]);
 
       setNote(nextNote);
+      setSavedSummary(summary);
       setMessages(savedMessages);
     }
 
@@ -139,6 +145,85 @@ export default function AiChat({ noteId }: AiChatProps) {
     setMessages(nextMessages);
     setInput("");
     await requestAssistantMessage(nextMessages);
+  }
+
+  if (savedSummary === undefined) {
+    return <main className="page-shell" />;
+  }
+
+  if (savedSummary) {
+    return (
+      <main className="page-shell">
+        <section className="mx-auto grid max-w-6xl gap-6 py-8 lg:grid-cols-[1fr_320px]">
+          <div className="warm-panel rounded-[24px] p-7 md:p-10">
+            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">
+              감상 기록
+            </p>
+            <h1 className="mt-3 text-4xl font-black text-[#3f2a1d]">
+              {savedSummary.summaryTitle}
+            </h1>
+            {savedSummary.artist ? (
+              <p className="mt-2 text-lg font-semibold text-[#8a5a2f]">{savedSummary.artist}</p>
+            ) : null}
+            <p className="mt-4 text-base font-medium italic text-[#6b4b35]">
+              {savedSummary.oneLineReview}
+            </p>
+
+            <div className="mt-8 rounded-[22px] bg-[#f4e5c9]/70 px-6 py-5 leading-8 text-[#5b351f] whitespace-pre-wrap">
+              {savedSummary.essay}
+            </div>
+
+            {savedSummary.emotionTags.length > 0 ? (
+              <div className="mt-6">
+                <p className="text-sm font-bold text-[#5b351f]">감상 태그</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {savedSummary.emotionTags.map((tag) => (
+                    <span key={tag} className="rounded-full bg-[#697a4c] px-3 py-2 text-sm font-bold text-[#fff8eb]">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <p className="mt-6 text-xs text-[#8a5a2f]">
+              마지막 저장: {new Date(savedSummary.updatedAt).toLocaleString()}
+            </p>
+          </div>
+
+          <aside className="space-y-4">
+            <div className="warm-panel h-fit rounded-[24px] p-6">
+              <h2 className="text-xl font-black text-[#3f2a1d]">기록 관리</h2>
+              <Link
+                href={`/summary?noteId=${noteId}`}
+                className="mt-5 block rounded-2xl bg-[#697a4c] px-5 py-3 text-center font-bold text-[#fff8eb]"
+              >
+                기록 수정하기
+              </Link>
+              <Link
+                href={note ? `/${note.category}` : "/"}
+                className="mt-3 block rounded-2xl border border-[#8a5a2f]/25 px-5 py-3 text-center font-bold text-[#5b351f]"
+              >
+                목록으로 돌아가기
+              </Link>
+            </div>
+            <div className="warm-panel h-fit rounded-[24px] p-6">
+              <h2 className="text-xl font-black text-[#3f2a1d]">AI 대화</h2>
+              <p className="mt-3 leading-7 text-[#6b4b35]">
+                더 이야기를 나누거나 감상을 이어갈 수 있어요.
+              </p>
+              <button
+                type="button"
+                onClick={() => setSavedSummary(null)}
+                className="mt-5 block w-full rounded-2xl border border-[#8a5a2f]/25 px-5 py-3 text-center font-bold text-[#5b351f]"
+              >
+                채팅으로 이동
+              </button>
+            </div>
+          </aside>
+        </section>
+      </main>
+    );
   }
 
   return (

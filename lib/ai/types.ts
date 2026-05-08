@@ -27,6 +27,7 @@ export type SummaryRequestBody = {
 
 export type SummaryResponseBody = {
   summaryTitle: string;
+  artist: string;
   oneLineReview: string;
   essay: string;
   emotionTags: string[];

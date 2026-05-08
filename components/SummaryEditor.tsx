@@ -20,6 +20,7 @@ export default function SummaryEditor() {
   const noteId = searchParams.get("noteId");
   const [note, setNote] = useState<StoredNote | null>(null);
   const [summaryTitle, setSummaryTitle] = useState("");
+  const [artist, setArtist] = useState("");
   const [oneLineReview, setOneLineReview] = useState("");
   const [essay, setEssay] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -52,6 +53,7 @@ export default function SummaryEditor() {
 
       if (draft) {
         setSummaryTitle(draft.summaryTitle);
+        setArtist(draft.artist ?? "");
         setOneLineReview(draft.oneLineReview);
         setEssay(draft.essay);
         setKeywords(draft.keywords.slice(0, 3));
@@ -118,6 +120,7 @@ export default function SummaryEditor() {
       }
 
       setSummaryTitle(summary.summaryTitle);
+      setArtist(summary.artist ?? "");
       setOneLineReview(summary.oneLineReview);
       setEssay(summary.essay);
       setKeywords(summary.keywords.slice(0, 3));
@@ -157,13 +160,14 @@ export default function SummaryEditor() {
       return;
     }
 
-    if (keywords.length !== 3 || emotionTags.length !== 3) {
-      setMessage("핵심 키워드와 감정 태그를 각각 3개씩 입력해 주세요.");
+    if (emotionTags.length !== 3) {
+      setMessage("감상 태그를 3개 입력해 주세요.");
       return;
     }
 
     const summary = await saveSummary(noteId, {
       summaryTitle: summaryTitle.trim(),
+      artist: artist.trim(),
       oneLineReview: oneLineReview.trim(),
       essay: essay.trim(),
       emotionTags,
@@ -237,8 +241,19 @@ export default function SummaryEditor() {
             onChange={(event) => setSummaryTitle(event.target.value)}
           />
 
+          <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-artist">
+            2. 아티스트
+          </label>
+          <input
+            id="summary-artist"
+            className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium text-[#5b351f] outline-none disabled:opacity-60"
+            value={artist}
+            disabled={isLoading}
+            onChange={(event) => setArtist(event.target.value)}
+          />
+
           <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-one-line">
-            2. 한 줄 감상
+            3. 한 줄 감상
           </label>
           <input
             id="summary-one-line"
@@ -249,7 +264,7 @@ export default function SummaryEditor() {
           />
 
           <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-essay">
-            3. 감상문 본문
+            4. 감상문 본문
           </label>
           <textarea
             id="summary-essay"
@@ -259,39 +274,16 @@ export default function SummaryEditor() {
             onChange={(event) => setEssay(event.target.value)}
           />
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <label className="block text-sm font-bold text-[#5b351f]" htmlFor="summary-keywords">
-              4. 핵심 키워드 3개
-              <input
-                id="summary-keywords"
-                className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium outline-none disabled:opacity-60"
-                value={keywordText}
-                disabled={isLoading}
-                onChange={(event) => handleTagChange(event.target.value, setKeywords)}
-              />
-            </label>
-            <label className="block text-sm font-bold text-[#5b351f]" htmlFor="summary-emotions">
-              5. 감정 태그 3개
-              <input
-                id="summary-emotions"
-                className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium outline-none disabled:opacity-60"
-                value={emotionText}
-                disabled={isLoading}
-                onChange={(event) => handleTagChange(event.target.value, setEmotionTags)}
-              />
-            </label>
-          </div>
-
-          <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-taste">
-            tasteHint
+          <label className="mt-6 block text-sm font-bold text-[#5b351f]" htmlFor="summary-emotions">
+            5. 감상 태그 3개
+            <input
+              id="summary-emotions"
+              className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium outline-none disabled:opacity-60"
+              value={emotionText}
+              disabled={isLoading}
+              onChange={(event) => handleTagChange(event.target.value, setEmotionTags)}
+            />
           </label>
-          <input
-            id="summary-taste"
-            className="mt-2 w-full rounded-2xl border border-[#8a5a2f]/20 bg-[#fff8eb] px-4 py-3 font-medium text-[#5b351f] outline-none disabled:opacity-60"
-            value={tasteHint}
-            disabled={isLoading}
-            onChange={(event) => setTasteHint(event.target.value)}
-          />
 
           {message ? <p className="mt-5 text-sm font-bold text-[#8a5a2f]">{message}</p> : null}
 
@@ -323,17 +315,6 @@ export default function SummaryEditor() {
                 </span>
               ))}
             </div>
-          </section>
-          <section className="warm-panel rounded-[24px] p-6">
-            <h2 className="text-xl font-black text-[#3f2a1d]">저장 위치</h2>
-            <p className="mt-3 leading-7 text-[#6b4b35]">
-              저장하면 해당 노트의 summary 정보로 Vercel Postgres에 보관되고, 원래 카테고리 페이지로 이동합니다.
-            </p>
-            {savedSummary ? (
-              <p className="mt-3 text-sm font-bold text-[#8a5a2f]">
-                마지막 저장: {new Date(savedSummary.updatedAt).toLocaleString()}
-              </p>
-            ) : null}
           </section>
         </aside>
       </section>
