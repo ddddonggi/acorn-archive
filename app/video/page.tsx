@@ -6,9 +6,9 @@ export default function VideoPage() {
       categoryKey="video"
       category={{
         label: "영상",
-        prompt: "어떤 영화나 영상을 봤나요?",
+        prompt: "어떤 영화를 봤나요?",
         mood: "작은 화면에서 오래 남은 장면을 꺼내는 곳",
-        placeholder: "어떤 영화나 영상을 봤나요?",
+        placeholder: "어떤 영화를 봤나요?",
       }}
     />
   );

@@ -97,17 +97,20 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
 
         {notes.length > 0 ? (
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {notes.map((note, index) => (
+            {notes.map((note) => (
               <Link
                 key={note.id}
                 href={`/notes/${note.id}`}
-                className="warm-panel min-h-48 rounded-[22px] p-6 transition hover:-translate-y-1"
+                className="warm-panel flex min-h-48 flex-col justify-between rounded-[18px] p-6 transition hover:-translate-y-1"
               >
-                <p className="text-sm font-bold text-[#697a4c]">NOTE {notes.length - index}</p>
-                <h2 className="mt-5 text-2xl font-black text-[#3f2a1d]">{note.title}</h2>
-                <p className="mt-4 leading-7 text-[#6b4b35]">
-                  AI와 대화하며 감상을 천천히 꺼내는 자리
-                </p>
+                <div>
+                  <p className="text-sm font-bold text-[#697a4c]">{note.category}</p>
+                  <h2 className="mt-4 text-2xl font-black text-[#3f2a1d]">{note.title}</h2>
+                </div>
+                <div className="mt-8 border-t border-[#8a5a2f]/15 pt-4 text-sm font-semibold text-[#6b4b35]">
+                  <p>카테고리: {category.label}</p>
+                  <p className="mt-1">생성 날짜: {formatDate(note.createdAt)}</p>
+                </div>
               </Link>
             ))}
           </div>
@@ -150,7 +153,7 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
                 type="submit"
                 className="block w-full rounded-2xl bg-[#8a5a2f] px-4 py-3 text-center font-bold text-[#fff8eb]"
               >
-                노트 만들기
+                확인
               </button>
             </form>
           </section>
@@ -158,4 +161,12 @@ export default function CategoryNotes({ categoryKey, category }: CategoryNotesPr
       ) : null}
     </main>
   );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
 }
