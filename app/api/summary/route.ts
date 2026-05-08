@@ -11,18 +11,45 @@ import { SummaryRequestBody, SummaryResponseBody } from "@/lib/ai/types";
 const MAX_CONTEXT_MESSAGES = 20;
 
 export async function POST(request: Request) {
+  let debugContext: Record<string, unknown> = {
+    endpoint: "POST /api/summary",
+    timestamp: new Date().toISOString(),
+    geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+    hasGeminiApiKey: Boolean(process.env.GEMINI_API_KEY),
+  };
+
   try {
     const body = (await request.json()) as Partial<SummaryRequestBody>;
     const note = body.note;
     const messages = body.messages ?? [];
 
+    debugContext = {
+      ...debugContext,
+      note,
+      messagesCount: Array.isArray(messages) ? messages.length : "invalid",
+    };
+
     if (!note?.id || !note.title || !isValidCategory(note.category) || !Array.isArray(messages)) {
-      return NextResponse.json(SUMMARY_FALLBACK, { status: 400 });
+      return NextResponse.json(
+        {
+          ...SUMMARY_FALLBACK,
+          debug: {
+            ...debugContext,
+            status: 400,
+            reason: "요청 body의 note 또는 messages 형식이 올바르지 않습니다.",
+          },
+        },
+        { status: 400 },
+      );
     }
 
     const recentMessages = messages
       .filter((message) => isValidMessage(message))
       .slice(-MAX_CONTEXT_MESSAGES);
+    debugContext = {
+      ...debugContext,
+      recentMessages,
+    };
     const content = await generateGeminiText({
       systemInstruction: [
         buildSummarySystemPrompt(note.category),
@@ -36,8 +63,19 @@ export async function POST(request: Request) {
     const summary = normalizeSummary(JSON.parse(extractJsonObject(content)));
 
     return NextResponse.json(summary);
-  } catch {
-    return NextResponse.json(SUMMARY_FALLBACK, { status: 500 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ...SUMMARY_FALLBACK,
+        debug: {
+          ...debugContext,
+          status: 500,
+          reason: "Gemini API 호출, JSON 파싱, 또는 감상문 정리 중 오류가 발생했습니다.",
+          errorMessage: error instanceof Error ? error.message : String(error),
+        },
+      },
+      { status: 500 },
+    );
   }
 }
 

@@ -3,13 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import DebugErrorModal from "@/components/DebugErrorModal";
+import { ChatResponseBody } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/auth";
 import { appendMessages, ChatMessage, getMessagesByNoteId } from "@/lib/chat";
-import { ChatResponseBody } from "@/lib/ai/types";
 import { getNoteById, StoredNote } from "@/lib/notes";
 
 type AiChatProps = {
   noteId: string;
+};
+
+type ChatApiResponse = ChatResponseBody & {
+  debug?: unknown;
 };
 
 const categoryLabels = {
@@ -28,6 +33,7 @@ export default function AiChat({ noteId }: AiChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<unknown>(null);
 
   useEffect(() => {
     if (!getCurrentUser()) {
@@ -65,31 +71,50 @@ export default function AiChat({ noteId }: AiChatProps) {
 
     setIsLoading(true);
 
+    const requestBody = {
+      note: {
+        id: note.id,
+        title: note.title,
+        category: note.category,
+      },
+      messages: nextMessages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
+    };
+
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          note: {
-            id: note.id,
-            title: note.title,
-            category: note.category,
-          },
-          messages: nextMessages.map((message) => ({
-            role: message.role,
-            content: message.content,
-          })),
-        }),
+        body: JSON.stringify(requestBody),
       });
-      const data = (await response.json()) as ChatResponseBody;
+      const data = (await response.json()) as ChatApiResponse;
+
+      if (!response.ok || data.debug) {
+        setDebugInfo({
+          screen: "AI 대화 페이지",
+          action: "assistant message request",
+          httpStatus: response.status,
+          requestBody,
+          serverDebug: data.debug,
+          serverMessage: data.message,
+        });
+        return;
+      }
+
       const assistantMessage = data.message || fallbackMessage;
       appendMessages(noteId, [{ role: "assistant", content: assistantMessage }]);
       setMessages(getMessagesByNoteId(noteId));
-    } catch {
-      appendMessages(noteId, [{ role: "assistant", content: fallbackMessage }]);
-      setMessages(getMessagesByNoteId(noteId));
+    } catch (error) {
+      setDebugInfo({
+        screen: "AI 대화 페이지",
+        action: "assistant message request",
+        requestBody,
+        clientError: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +139,15 @@ export default function AiChat({ noteId }: AiChatProps) {
 
   return (
     <main className="page-shell">
+      {debugInfo ? (
+        <DebugErrorModal
+          title="AI 응답 생성 중 오류가 발생했어요"
+          description="아래 정보로 Vercel 로그, 환경변수, Gemini 모델명 문제를 함께 확인할 수 있어요."
+          debug={debugInfo}
+          onClose={() => setDebugInfo(null)}
+        />
+      ) : null}
+
       <section className="mx-auto grid max-w-6xl gap-6 py-8 lg:grid-cols-[1fr_320px]">
         <div className="warm-panel flex min-h-[680px] flex-col rounded-[24px] p-5 md:p-7">
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">

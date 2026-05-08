@@ -33,17 +33,8 @@ type LegacySummary = Partial<StoredSummary> & {
 };
 
 const SUMMARY_KEY = "acorn_summaries";
-
-const emotionRules = [
-  { tag: "따뜻함", words: ["따뜻", "좋", "편안", "위로", "포근", "고마"] },
-  { tag: "먹먹함", words: ["슬", "먹먹", "외로", "그리", "눈물", "아프"] },
-  { tag: "설렘", words: ["설레", "기대", "반짝", "두근", "기분"] },
-  { tag: "낯섦", words: ["낯", "이상", "불편", "묘", "혼란", "어색"] },
-  { tag: "사색", words: ["생각", "질문", "왜", "의미", "기억", "나와"] },
-];
-
-const fallbackKeywords = ["감상", "기억", "여운"];
-const fallbackEmotions = ["사색", "여운", "호기심"];
+const fallbackKeywords = ["작품", "생각", "기록"];
+const fallbackEmotions = ["기록", "감상", "시작"];
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -86,51 +77,43 @@ export function generateSummaryFromMessages({
   category,
   messages,
 }: SummaryInput): GeneratedSummary {
-  const userMessages = messages.filter((message) => message.role === "user");
-  const userTexts = userMessages.map((message) => cleanText(message.content)).filter(Boolean);
-  const joinedText = userTexts.join(" ");
-  const keywords = extractKeywords(joinedText);
-  const emotionTags = extractEmotions(joinedText);
-  const mainEmotion = emotionTags[0];
-  const firstThought = userTexts[0];
-  const rememberedPart = userTexts[1] ?? userTexts[0];
-  const meaningPart = userTexts[2] ?? userTexts[userTexts.length - 1];
+  const userTexts = messages
+    .filter((message) => message.role === "user")
+    .map((message) => message.content.trim())
+    .filter(Boolean);
   const categoryLabel = getCategoryLabel(category);
 
   if (userTexts.length === 0) {
     return {
       summaryTitle: `${noteTitle} 감상 기록`,
-      oneLineReview: "아직 충분한 대화가 없어 첫 감상을 기다리고 있다.",
-      essay:
-        `${categoryLabel} "${noteTitle}"에 대한 대화가 아직 충분히 쌓이지 않았다.\n\n` +
-        "그래서 지금은 작품에 대해 없는 내용을 덧붙이지 않고, 감상을 시작하기 전의 짧은 기록으로 남긴다.\n\n" +
-        "다음 대화에서 가장 먼저 든 생각과 기억에 남은 부분이 더해지면 감상문을 자연스럽게 정리할 수 있다.",
-      emotionTags,
-      keywords,
-      tasteHint: "아직 취향을 판단하기에는 감상 데이터가 부족합니다.",
+      oneLineReview: "아직 대화가 충분하지 않아 감상을 더 기다리고 있어요.",
+      essay: `${categoryLabel} "${noteTitle}"에 대한 대화가 아직 충분히 쌓이지 않았습니다.\n\n지금은 작품을 보고 처음 떠오른 감정과 생각을 기록하기 전 단계입니다.\n\n조금 더 이야기하면 감상문을 자연스럽게 정리할 수 있습니다.`,
+      emotionTags: fallbackEmotions,
+      keywords: fallbackKeywords,
+      tasteHint: "조금 더 대화를 나누면 사용자의 취향을 더 잘 발견할 수 있어요.",
     };
   }
 
-  const essay = limitLength(
-    [
-      `${categoryLabel} "${noteTitle}"을 감상한 뒤 가장 크게 남은 감정은 ${mainEmotion}이었다. 사용자는 "${firstThought}"라고 말하며 작품이 남긴 첫 인상을 꺼냈다.`,
-      rememberedPart
-        ? `그 감정이 생긴 이유는 "${rememberedPart}"라는 말 속에 드러난다. 작품의 줄거리보다 사용자가 붙잡은 분위기와 생각이 더 중요하게 남아 있다.`
-        : "아직 구체적인 이유가 길게 말해지지는 않았지만, 첫 감정 자체가 이 감상의 중심이 된다.",
-      meaningPart
-        ? `결국 이 작품은 사용자에게 "${meaningPart}"라는 생각을 남겼다. 이 감상은 작품을 설명하기보다, 사용자가 무엇에 반응하고 어떤 의미를 오래 바라보는지 보여주는 기록이다.`
-        : "결국 이 작품은 사용자에게 짧지만 분명한 여운을 남겼다. 아직 많은 말은 없지만, 감정 중심의 감상 기록으로 충분히 의미가 있다.",
-    ].join("\n\n"),
-    500,
-  );
+  const joinedText = userTexts.join(" ");
+  const keywords = fillToThree(extractKeywords(joinedText), fallbackKeywords);
+  const emotionTags = fillToThree(extractEmotions(joinedText), fallbackEmotions);
+  const essay = [
+    `${categoryLabel} "${noteTitle}"을 보고 가장 먼저 남은 감상은 "${userTexts[0]}"였습니다.`,
+    userTexts[1]
+      ? `그 감정은 "${userTexts[1]}"라는 말에서 더 구체적으로 드러납니다. 작품의 줄거리보다 사용자가 어떤 부분에 반응했는지가 중심이 되는 기록입니다.`
+      : "아직 이유가 길게 말해지지는 않았지만, 첫 감정 자체가 이 감상의 중심이 됩니다.",
+    userTexts[2]
+      ? `이 작품은 사용자에게 "${userTexts[2]}"라는 생각을 남겼습니다. 그래서 이 기록은 작품 설명보다 사용자의 마음이 어디에 머물렀는지를 보여줍니다.`
+      : "아직 작품이 남긴 의미는 더 이야기해볼 수 있지만, 지금의 짧은 감정만으로도 감상 기록을 시작할 수 있습니다.",
+  ].join("\n\n");
 
   return {
     summaryTitle: `${noteTitle} 감상문`,
-    oneLineReview: `${noteTitle}은 나에게 ${mainEmotion}과 ${keywords[0]}의 여운으로 남았다.`,
-    essay,
+    oneLineReview: `${noteTitle}은 나에게 ${keywords[0]}의 감상으로 남았습니다.`,
+    essay: essay.slice(0, 500),
     emotionTags,
     keywords,
-    tasteHint: `사용자는 ${mainEmotion}의 감정과 "${keywords[0]}" 같은 단서에 오래 반응하는 편입니다.`,
+    tasteHint: `사용자는 ${emotionTags[0]} 같은 감정과 ${keywords[0]} 같은 단서에 오래 반응하는 편입니다.`,
   };
 }
 
@@ -193,10 +176,6 @@ function normalizeSummary(summary: LegacySummary): StoredSummary {
   };
 }
 
-function cleanText(text: string) {
-  return text.replace(/\s+/g, " ").trim();
-}
-
 function extractKeywords(text: string) {
   const words = text
     .replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, " ")
@@ -209,21 +188,24 @@ function extractKeywords(text: string) {
     counts.set(word, (counts.get(word) ?? 0) + 1);
   });
 
-  const keywords = [...counts.entries()]
+  return [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([word]) => word)
     .slice(0, 3);
-
-  return fillToThree(keywords, fallbackKeywords);
 }
 
 function extractEmotions(text: string) {
-  const emotionTags = emotionRules
+  const rules = [
+    { tag: "먹먹함", words: ["먹먹", "슬픔", "슬펐", "아픔", "그리움"] },
+    { tag: "따뜻함", words: ["따뜻", "편안", "위로", "좋았", "고마"] },
+    { tag: "설렘", words: ["설렘", "기대", "반짝", "두근"] },
+    { tag: "사색", words: ["생각", "질문", "의미", "기억", "나"] },
+  ];
+
+  return rules
     .filter((rule) => rule.words.some((word) => text.includes(word)))
     .map((rule) => rule.tag)
     .slice(0, 3);
-
-  return fillToThree(emotionTags, fallbackEmotions);
 }
 
 function fillToThree(values: string[], fallbacks: string[]) {
@@ -236,14 +218,6 @@ function fillToThree(values: string[], fallbacks: string[]) {
   });
 
   return result.slice(0, 3);
-}
-
-function limitLength(text: string, maxLength: number) {
-  if (text.length <= maxLength) {
-    return text;
-  }
-
-  return `${text.slice(0, maxLength - 1).trim()}…`;
 }
 
 function getCategoryLabel(category: NoteCategory) {

@@ -12,13 +12,36 @@ const FALLBACK_MESSAGE = "지금은 AI가 잠시 쉬고 있어요. 다시 시도
 const MAX_CONTEXT_MESSAGES = 10;
 
 export async function POST(request: Request) {
+  let debugContext: Record<string, unknown> = {
+    endpoint: "POST /api/chat",
+    timestamp: new Date().toISOString(),
+    geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+    hasGeminiApiKey: Boolean(process.env.GEMINI_API_KEY),
+  };
+
   try {
     const body = (await request.json()) as Partial<ChatRequestBody>;
     const note = body.note;
     const messages = body.messages ?? [];
 
+    debugContext = {
+      ...debugContext,
+      note,
+      messagesCount: Array.isArray(messages) ? messages.length : "invalid",
+    };
+
     if (!note?.id || !note.title || !isValidCategory(note.category) || !Array.isArray(messages)) {
-      return NextResponse.json({ message: FALLBACK_MESSAGE }, { status: 400 });
+      return NextResponse.json(
+        {
+          message: FALLBACK_MESSAGE,
+          debug: {
+            ...debugContext,
+            status: 400,
+            reason: "요청 body의 note 또는 messages 형식이 올바르지 않습니다.",
+          },
+        },
+        { status: 400 },
+      );
     }
 
     if (messages.length === 0) {
@@ -28,6 +51,10 @@ export async function POST(request: Request) {
     const recentMessages = messages
       .filter((message) => isValidMessage(message))
       .slice(-MAX_CONTEXT_MESSAGES);
+    debugContext = {
+      ...debugContext,
+      recentMessages,
+    };
     const message = await generateGeminiText({
       systemInstruction: [
         buildChatSystemPrompt(note.category),
@@ -39,8 +66,19 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ message });
-  } catch {
-    return NextResponse.json({ message: FALLBACK_MESSAGE }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        message: FALLBACK_MESSAGE,
+        debug: {
+          ...debugContext,
+          status: 500,
+          reason: "Gemini API 호출 또는 응답 처리 중 오류가 발생했습니다.",
+          errorMessage: error instanceof Error ? error.message : String(error),
+        },
+      },
+      { status: 500 },
+    );
   }
 }
 

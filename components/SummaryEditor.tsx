@@ -3,11 +3,16 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import DebugErrorModal from "@/components/DebugErrorModal";
+import { SummaryResponseBody } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/auth";
 import { getMessagesByNoteId } from "@/lib/chat";
-import { SummaryResponseBody } from "@/lib/ai/types";
 import { getNoteById, StoredNote } from "@/lib/notes";
 import { getSummaryByNoteId, saveSummary, StoredSummary } from "@/lib/summary";
+
+type SummaryApiResponse = SummaryResponseBody & {
+  debug?: unknown;
+};
 
 export default function SummaryEditor() {
   const router = useRouter();
@@ -23,6 +28,7 @@ export default function SummaryEditor() {
   const [savedSummary, setSavedSummary] = useState<StoredSummary | null>(null);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<unknown>(null);
 
   useEffect(() => {
     if (!getCurrentUser()) {
@@ -65,26 +71,46 @@ export default function SummaryEditor() {
     setIsLoading(true);
     setMessage("");
 
+    const messages = getMessagesByNoteId(targetNoteId);
+    const requestBody = {
+      note: {
+        id: targetNote.id,
+        title: targetNote.title,
+        category: targetNote.category,
+      },
+      messages: messages.map((chatMessage) => ({
+        role: chatMessage.role,
+        content: chatMessage.content,
+      })),
+    };
+
     try {
-      const messages = getMessagesByNoteId(targetNoteId);
       const response = await fetch("/api/summary", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          note: {
-            id: targetNote.id,
-            title: targetNote.title,
-            category: targetNote.category,
-          },
-          messages: messages.map((chatMessage) => ({
-            role: chatMessage.role,
-            content: chatMessage.content,
-          })),
-        }),
+        body: JSON.stringify(requestBody),
       });
-      const summary = (await response.json()) as SummaryResponseBody;
+      const summary = (await response.json()) as SummaryApiResponse;
+
+      if (!response.ok || summary.debug) {
+        setDebugInfo({
+          screen: "감상문 정리 페이지",
+          action: "summary generation request",
+          httpStatus: response.status,
+          requestBody,
+          serverDebug: summary.debug,
+          fallbackSummary: {
+            summaryTitle: summary.summaryTitle,
+            oneLineReview: summary.oneLineReview,
+            essay: summary.essay,
+            emotionTags: summary.emotionTags,
+            keywords: summary.keywords,
+            tasteHint: summary.tasteHint,
+          },
+        });
+      }
 
       setSummaryTitle(summary.summaryTitle);
       setOneLineReview(summary.oneLineReview);
@@ -92,7 +118,13 @@ export default function SummaryEditor() {
       setKeywords(summary.keywords.slice(0, 3));
       setEmotionTags(summary.emotionTags.slice(0, 3));
       setTasteHint(summary.tasteHint);
-    } catch {
+    } catch (error) {
+      setDebugInfo({
+        screen: "감상문 정리 페이지",
+        action: "summary generation request",
+        requestBody,
+        clientError: error instanceof Error ? error.message : String(error),
+      });
       setMessage("감상문 정리에 실패했어요. 잠시 후 다시 시도해주세요.");
     } finally {
       setIsLoading(false);
@@ -148,8 +180,13 @@ export default function SummaryEditor() {
       <main className="page-shell flex items-center justify-center">
         <section className="warm-panel max-w-md rounded-[24px] p-7 text-center">
           <h1 className="text-3xl font-black text-[#3f2a1d]">정리할 노트가 없어요</h1>
-          <p className="mt-3 text-[#6b4b35]">감상 노트에서 정리 버튼을 눌러 다시 들어와 주세요.</p>
-          <Link href="/" className="mt-6 inline-flex rounded-2xl bg-[#8a5a2f] px-5 py-3 font-bold text-[#fff8eb]">
+          <p className="mt-3 text-[#6b4b35]">
+            감상 노트에서 정리 버튼을 눌러 다시 들어와 주세요.
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-flex rounded-2xl bg-[#8a5a2f] px-5 py-3 font-bold text-[#fff8eb]"
+          >
             홈으로
           </Link>
         </section>
@@ -159,6 +196,15 @@ export default function SummaryEditor() {
 
   return (
     <main className="page-shell">
+      {debugInfo ? (
+        <DebugErrorModal
+          title="감상문 정리 중 오류가 발생했어요"
+          description="아래 정보로 Vercel 로그, 환경변수, Gemini 모델명, JSON 응답 문제를 확인할 수 있어요."
+          debug={debugInfo}
+          onClose={() => setDebugInfo(null)}
+        />
+      ) : null}
+
       <section className="mx-auto grid max-w-6xl gap-6 py-10 lg:grid-cols-[1fr_320px]">
         <div className="warm-panel rounded-[24px] p-7 md:p-10">
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#697a4c]">
